@@ -1,0 +1,4 @@
+Found {{ count }} epic(s):
+{% for epic in epics %}
+  - {{ epic.short_description }} (Priority: {{ epic.priority }})
+{% endfor %}

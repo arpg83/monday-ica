@@ -1,0 +1,4 @@
+Found {{ count }} user(s):
+{% for user in users %}
+  - {{ user.name }} (Email: {{ user.email or 'N/A' }}, Username: {{ user.user_name or 'N/A' }})
+{% endfor %}
