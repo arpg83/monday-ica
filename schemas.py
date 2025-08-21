@@ -10,3 +10,10 @@ class OutputModel(BaseModel):
     invocationId: str
     response: List[ResponseMessageModel]
 
+class ListGroupBoard(BaseModel):
+    limit: int
+    page: int
+
+class CreateBoard(BaseModel):
+    board_name: str
+    board_kind: str
