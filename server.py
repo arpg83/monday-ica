@@ -55,10 +55,11 @@ async def list_users(request: Request) -> OutputModel:
     board_list = "\n".join(
         [f"- {board['name']} (ID: {board['id']})" for board in boards]
     )
+    message = "Available Monday.com Boards: \n %s" % (board_list) 
 
     return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message="Available Monday.com Boards:\n{board_list}")]
+            response=[ResponseMessageModel(message=message)]
     )
 
 @app.get("/monday/users/list")
