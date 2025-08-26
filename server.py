@@ -48,7 +48,6 @@ async def listBoards(request: Request) -> OutputModel:
     data = await request.json()
     params = ListBoardsParams(**data)
     response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
-    monday_client.users.fetch_users()
     boards = response["data"]["boards"]
     board_list = "\n".join(
         [f"- {board['name']} (ID: {board['id']})" for board in boards]
@@ -75,10 +74,16 @@ async def listUsers(request: Request) -> OutputModel:
     monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
 
     response = monday_client.users.fetch_users()
+    users = response["data"]["users"]
+    users_list = "\n".join(
+        [f"- {user['name']} (ID: {user['id']})" for user in users]
+    )
+
+    message = "Available Monday.com Users: \n %s" % (users_list) 
 
     return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message="Available Monday.com Boards:\n{user_list}")]
+            response=[ResponseMessageModel(message=message)]
     )
 
 #monday-get-board-groups: Retrieves all groups from a specified Monday.com board
