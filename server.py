@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams
 from monday import MondayClient
 
 load_dotenv()
@@ -46,7 +46,7 @@ async def listBoards(request: Request) -> OutputModel:
     )
 
     data = await request.json()
-    params = listBoards(**data)
+    params = ListBoardsParams(**data)
     response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
     monday_client.users.fetch_users()
     boards = response["data"]["boards"]
