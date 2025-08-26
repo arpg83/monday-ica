@@ -1,0 +1,8 @@
+{% if success %}
+✅ Item updated successfully:
+- Item ID: {{ item_id }}
+- Updated text: {{ update_text }}
+{% else %}
+❌ Failed to update item:
+- Error: {{ error_message }}
+{% endif %}
