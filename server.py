@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 import os
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams
 from monday import MondayClient
+from monday.resources.types import BoardKind
 
 
 load_dotenv()
@@ -105,57 +106,34 @@ async def listUsers(request: Request) -> OutputModel:
 @app.post("/monday/board/create")
 async def create_board(request: Request) -> OutputModel:
     """
-    Create a new board in Monday.
+    Create a new Monday.com board.
 
     Args:
-        params: Parameters for creating the board.
+        board_name (str): The name of the board.
+        board_kind (str): The kind of board to create. Must be one of "public" or "private".
 
     Returns:
-        Response with the created board details.
+
     """
     invocation_id = str(uuid4())
     data = await request.json()
     params = CreateBoardParams(**data)
-    instance_url = os.getenv("MONDAY_INSTANCIA")    
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
 
-    # Build request data
-    data = {
-        "board_name": params.board_name,
-    }
+    actual_board_kind = BoardKind(params.board_kind)
+    board = monday_client.boards.create_board(
+        board_name=params.board_name, board_kind=actual_board_kind
+    )
 
-    if params.board_kind:
-        data["board_kind"] = params.board_kind
-    
-    headers = {"Accept": "application/json"}
+    message = f"Created monday board {params.board_name} of kind {params.board_kind}. ID of the new board: {board['data']['create_board']['id']}"
 
-    # Make request
-    try:
-        response = requests.post(            
-            json=data,
-            headers=headers,
-            auth=HTTPBasicAuth(os.getenv("MONDAY_USUARIO"), os.getenv("MONDAY_CONTRASENA"))
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", {})
-
-        response_template = template_env.get_template("response_template_board_created.jinja")
-        rendered_response = response_template.render(
-            board_name=result.get("board_name"),
-            board_kind=result.get("board_kind"),
-        )
-
-        return OutputModel(
+    return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message=rendered_response)]
-        )
-    
-    except requests.RequestException as e:
-        logger.error(f"Failed to create board: {e}")
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Failed to create board: {str(e)}")]
-        )
+            response=[ResponseMessageModel(message=message)]
+    )
+
+
+
     
 @app.post("/monday/board_group/create")
 async def create_board_group(request: Request) -> OutputModel:
