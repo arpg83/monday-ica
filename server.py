@@ -15,6 +15,7 @@ import os
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams
 from monday import MondayClient
 
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ async def listBoards(request: Request) -> OutputModel:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
-        invocationId=invocation_id,
+        invocationId=invocation_id,        
         response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
     )
 
