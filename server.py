@@ -298,7 +298,8 @@ async def create_item(request: Request) -> OutputModel:
     data = await request.json()
     params = None
     monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-
+    message = ""
+    response = None
     #if params.parent_item_id is None and params.group_id is not None:
     if "board_id" in data:
         logger.info("Creacion item")
@@ -309,6 +310,7 @@ async def create_item(request: Request) -> OutputModel:
             item_name=params.item_name,
             column_values=params.columns_values,
         )
+        logger.info(response)
     #elif params.parent_item_id is not None and params.group_id is None:
     elif "parent_item_id" in data:
         logger.info("Creacion sub item")
@@ -318,6 +320,7 @@ async def create_item(request: Request) -> OutputModel:
             subitem_name=params.item_name,
             column_values=params.columns_values
         )
+        logger.info(response)
     else:
 
         message = "You can set either Group ID or Parent Item ID argument, but not both."
@@ -329,15 +332,17 @@ async def create_item(request: Request) -> OutputModel:
 
     try:
         data = response["data"]
-        id_key = "create_item" if params.parent_item_id is None else "create_subitem"
+        #id_key = "create_item" if params.parent_item_id is None else "create_subitem"
         #item_url = f"{MONDAY_WORKSPACE_URL}/boards/{params.board_id}/pulses/{data.get(id_key).get('id')}"
 
-        if params.parent_item_id is None and params.group_id is not None:
+        #if params.parent_item_id is None and params.group_id is not None:
+        if "board_id" in data:
             message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id} and group Id: {params.group_id}."   
-        elif params.parent_item_id is not None and params.group_id is None:
-             message = f"Created a new Monday.com item: {params.parent_item_id} on board Id: {params.board_id}."       
-        else:
-            message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."       
+        #elif params.parent_item_id is not None and params.group_id is None:
+        elif "parent_item_id" in data:
+             message = f"Created a new Monday.com sub item: {params.parent_item_id} on board Id: {params.board_id}."       
+        #else:
+        #    message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."       
 
         return OutputModel(
                     invocationId=invocation_id,
