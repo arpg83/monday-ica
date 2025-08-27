@@ -113,3 +113,5 @@ class ArchiveItemParams(BaseModel):
 class DeleteItemParams(BaseModel): 
     item_id: str 
    
+class FetchItemsByBoardId(BaseModel):
+    board_id:str
