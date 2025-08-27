@@ -170,6 +170,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     
     for board in board["data"]["boards"]:
         board_name = board["name"]
+        logger.info(board)
         logger.info(board_name)
         message = f"{message}  Board: {board_name}"
         items_page = board["items_page"]
