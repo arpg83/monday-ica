@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams,FetchItemsByBoardId
 from monday import MondayClient
 from monday.resources.types import BoardKind
 
@@ -26,7 +26,7 @@ T = TypeVar('T', bound=BaseModel)
 
 app = FastAPI()
 
-@app.get("/monday/boards/list")
+@app.post("/monday/boards/list")
 async def listBoards(request: Request) -> OutputModel:    
     """
     List Boards from Monday.
@@ -132,7 +132,65 @@ async def create_board(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
+@app.post("/monday/board/fetch_items_by_board_id")
+async def fetch_items_by_board_id(request: Request) -> OutputModel:
+    """
+    Create a new Monday.com board.
 
+    Args:
+        board_name (str): The name of the board.
+        board_kind (str): The kind of board to create. Must be one of "public" or "private".
+
+    Returns:
+
+    """
+    invocation_id = str(uuid4())
+    data = await request.json()
+    params = FetchItemsByBoardId(**data)
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    
+    board = monday_client.boards.fetch_items_by_board_id(
+        board_ids= params.board_id
+    )    
+    #print(board)
+    #print(board["data"])
+    message = f"Informacion del Board id: {params.board_id}"
+    
+    for board in board["data"]["boards"]:
+        board_name = board["name"]
+        message = f"{message}  Board: {board_name}"
+        items_page = board["items_page"]
+        print(items_page)
+        print("item_page")
+        if "cursor" in items_page:
+            print(items_page)
+            cursor = items_page["cursor"]
+            message = f"{message}  Cursor: {cursor}"
+            items = items_page["items"]
+            for item in items:
+                group = item["group"]
+                column_values = item["column_values"]
+                id = item["id"]
+                name = item["name"]
+                message = f"{message}  item name: {name}"
+                message = f"{message}  id: {id}"
+                if "column_values" in item:
+                    column_values = item["column_values"]
+                    for column in column_values:
+                        col_id = column["id"]
+                        text = column["text"]
+                        message = f"{message}  Column id: {col_id}"
+                        message = f"{message}  Column text: {text}"
+
+        
+        print(items_page)
+    
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+    )
 
     
 @app.post("/monday/board_group/create")
@@ -328,6 +386,8 @@ async def create_update_item(request: Request) -> OutputModel:
     """
     
     invocation_id = str(uuid4())
+
+
     headers = {"Accept": "application/json"}
     data = await request.json()
     params = CreateUpdateItemParams(**data)
