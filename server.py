@@ -15,9 +15,20 @@ import os
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams,FetchItemsByBoardId
 from monday import MondayClient
 from monday.resources.types import BoardKind
+from fastapi.responses import JSONResponse
 
 
 load_dotenv()
+
+logging.basicConfig(
+
+    level=logging.INFO,
+
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+
+    datefmt="%Y-%m-%d %H:%M:%S",
+
+)
 
 logger = logging.getLogger(__name__)
 template_env = Environment(loader=FileSystemLoader("templates"))
@@ -159,12 +170,10 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     
     for board in board["data"]["boards"]:
         board_name = board["name"]
+        logger.info(board_name)
         message = f"{message}  Board: {board_name}"
         items_page = board["items_page"]
-        print(items_page)
-        print("item_page")
         if "cursor" in items_page:
-            print(items_page)
             cursor = items_page["cursor"]
             message = f"{message}  Cursor: {cursor}"
             items = items_page["items"]
@@ -173,6 +182,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                 column_values = item["column_values"]
                 id = item["id"]
                 name = item["name"]
+                logger.info(name)
                 message = f"{message}  item name: {name}"
                 message = f"{message}  id: {id}"
                 if "column_values" in item:
@@ -183,14 +193,19 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                         message = f"{message}  Column id: {col_id}"
                         message = f"{message}  Column text: {text}"
 
-        
-        print(items_page)
-    
-
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
     )
+
+#    message = "Épicas"
+#    content = {"message":message}
+#    headers = {'Content-Disposition': 'inline; filename="out.json"'}
+
+#    return JSONResponse(
+#        content=content,
+#        headers=headers
+#    )
 
     
 @app.post("/monday/board_group/create")
