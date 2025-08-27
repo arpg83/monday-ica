@@ -20,22 +20,22 @@ class CreateBoardParams(BaseModel):
     board_name: str
     board_kind: str
 
-class CreateGroupInBoardParams(BaseModel):
+class CreateBoardGroupParams(BaseModel):
     board_id: str
     group_name: str
 
 class CreateItemParams(BaseModel):
     board_id: str
     item_name: str
-    group_id: str
-    parent_item_id: str
-    columns_values: List[str]
+    group_id: Optional[str] = None
+    parent_item_id: Optional[str] = None
+    columns_values: Optional[dict] = None
 
-class CreateUpdateParams(BaseModel):
+class CreateUpdateCommentParams(BaseModel):
     item_id: str
     update_text: str
     
-class CreateUpdateItemParams(BaseModel):
+class UpdateItemParams(BaseModel):
     board_id: str
     item_id: str
     monday_client: str

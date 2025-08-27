@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateGroupInBoardParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, CreateUpdateParams, CreateUpdateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
 
@@ -93,6 +93,45 @@ async def listUsers(request: Request) -> OutputModel:
 #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
 #monday-get-doc-content: Retrieves the content of a specific document
 
+@app.get("/monday/board_groups/get")
+async def getBoardGroups(request: Request) -> OutputModel:
+    """
+    Get the Groups of a Monday.com Board.
+
+    Args: 
+        board_id
+        
+    Returns:
+        List of Groups
+        
+    """
+    invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+    
+    data = await request.json()
+    params = GetBoardGroupsParams(**data)
+    response = monday_client.groups.get_groups_by_board(board_ids=params.board_id)
+
+    groups = response["data"]["groups"]
+    group_list = "\n".join(
+        [f"- {group['title']} (ID: {group['id']})" for group in groups]
+    )
+    message = "Available Monday.com Groups: \n %s" % (group_list) 
+
+    #message = f"Available Monday.com Groups: \n %s" % (response['data']) 
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+    )
+
 #monday-list-boards: Lists all available Monday.com boards
 #monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
 #monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
@@ -131,64 +170,40 @@ async def create_board(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
     )
-
-
-
-    
-@app.post("/monday/board_group/create")
+ 
+@app.post("/monday/group/create")
 async def create_board_group(request: Request) -> OutputModel:
     """
     Create a new group in a Monday.com board.
 
     Args:
-        params: Parameters for creating the group .
+        monday_client (MondayClient): The Monday.com client.
+        board_id (str): The ID of the board.
+        group_name (str): The name of the group.
 
-    Returns:
-        Response with the created group details.
+    Returns: 
+
     """
     invocation_id = str(uuid4())
     data = await request.json()
-    params = CreateGroupInBoardParams(**data)
-    instance_url = os.getenv("MONDAY_INSTANCIA")   
+    params = CreateBoardGroupParams(**data)
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
 
-    # Build request data
-    data = {
-        "board_id": params.board_id,
-    }
-
-    if params.group_name:
-        data["group_name"] = params.group_name
+    group = monday_client.groups.create_group(board_id=params.board_id, group_name=params.group_name)
     
-    headers = {"Accept": "application/json"}
+    message = f"Created new group: {params.group_name} in board: {params.board_id}. ID of the group: {group['data']['create_group']['id']}"
 
-    # Make request
-    try:
-        response = requests.post(           
-            json=data,
-            headers=headers,
-            auth=HTTPBasicAuth(os.getenv("MONDAY_USUARIO"), os.getenv("MONDAY_CONTRASENA"))
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", {})
-
-        response_template = template_env.get_template("response_template_group_board_created.jinja")
-        rendered_response = response_template.render(
-            board_id=result.get("board_id"),
-            group_name=result.get("group_name"),
-        )
-
-        return OutputModel(
+    return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message=rendered_response)]
-        )
+            response=[ResponseMessageModel(message=message)]
+    )
+
+@app.post("/monday/doc/create")
+async def create_doc(request: Request) -> OutputModel:
+    '''
     
-    except requests.RequestException as e:
-        logger.error(f"Failed to create group on board: {e}")
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Failed to create group on board: {str(e)}")]
-        )    
+    '''
+
 
 @app.post("/monday/item/create")
 async def create_item(request: Request) -> OutputModel:
@@ -204,58 +219,58 @@ async def create_item(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = CreateItemParams(**data)
-    instance_url = os.getenv("MONDAY_INSTANCIA")    
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+     
+    if params.parent_item_id is None and params.group_id is not None:
+        response = monday_client.items.create_item(
+            board_id=params.board_id,
+            group_id=params.group_id,
+            item_name=params.item_name,
+            column_values=params.columns_values,
+        )
+    elif params.parent_item_id is not None and params.group_id is None:
+        response = monday_client.items.create_subitem(
+            parent_item_id=params.parent_item_id,
+            subitem_name=params.item_name,
+            column_values=params.columns_values,
+        )
+    else:
 
-    # Build request data
-    data = {
-        "board_id": params.board_id,
-    }
+        message = "You can set either Group ID or Parent Item ID argument, but not both."
 
-    if params.item_name:
-        data["item_name"] = params.item_name
-    if params.group_id:
-        data["group_id"] = params.group_id 
-    if params.parent_item_id:
-        data["parent_item_id"] = params.parent_item_id
-    if params.columns_values:
-        data["columns_values"] = params.columns_values                  
-    
-    headers = {"Accept": "application/json"}
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
 
-    # Make request
     try:
-        response = requests.post(           
-            json=data,
-            headers=headers,
-            auth=HTTPBasicAuth(os.getenv("MONDAY_USUARIO"), os.getenv("MONDAY_CONTRASENA"))
-        )
-        response.raise_for_status()
+        data = response["data"]
+        id_key = "create_item" if params.parent_item_id is None else "create_subitem"
+        #item_url = f"{MONDAY_WORKSPACE_URL}/boards/{params.board_id}/pulses/{data.get(id_key).get('id')}"
 
-        result = response.json().get("result", {})
-
-        response_template = template_env.get_template("response_template_item_created.jinja")
-        rendered_response = response_template.render(
-            board_id=result.get("board_id"),
-            item_name=result.get("item_name"),
-            group_id=result.get("group_id"),
-            parent_item_id=result.get("parent_item_id"),
-            columns_values=result.get("columns_values")
-        )
+        if params.parent_item_id is None and params.group_id is not None:
+            message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id} and group Id: {params.group_id}."   
+        elif params.parent_item_id is not None and params.group_id is None:
+             message = f"Created a new Monday.com item: {params.parent_item_id} on board Id: {params.board_id}."       
+        else:
+            message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."       
 
         return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=rendered_response)]
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
         )
     
-    except requests.RequestException as e:
-        logger.error(f"Failed to create item: {e}")
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Failed to create item: {str(e)}")]
-        )    
+    except Exception as e:
 
-@app.put("/monday/item/update")
-async def create_update(request: Request) -> OutputModel:    
+            message = f"Error creating Monday.com item: {e}"
+
+            return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
+            )
+
+@app.put("/monday/comment/update")
+async def create_update_comment(request: Request) -> OutputModel:    
     """
     Create an update (comment) on a Monday.com Item or Sub-item.
 
@@ -265,58 +280,14 @@ async def create_update(request: Request) -> OutputModel:
     Returns:
         Response with the updated item details.
     """
-    
     invocation_id = str(uuid4())
-    headers = {"Accept": "application/json"}
     data = await request.json()
-    params = CreateUpdateParams(**data)
-    instance_url = os.getenv("MONDAY_INSTANCIA")
+    params = UpdateItemParams(**data)
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
  
-    # Build request data
-    data = {}
-
-    if params.short_desitemIdcription:
-        data["item_id"] = params.item_id
-    if params.update_text:
-        data["update_text"] = params.update_text
-
-    # Make request
-    try:
-        response = requests.put(           
-            json=data,
-            headers=headers,
-            auth=HTTPBasicAuth(os.getenv("MONDAY_USUARIO"), os.getenv("MONDAY_CONTRASENA"))
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", {})
-
-        response_template = template_env.get_template("response_template_item_updated.jinja")
-        rendered_response = response_template.render(
-            success=True,
-            item_id=result.get("item_id"),
-            update_text=result.get("update_text")
-        )
-
-        return OutputModel(
-            status="success",
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=rendered_response)]
-        )
-
-    except requests.RequestException as e:
-        response_template = template_env.get_template("response_template_item_updated.jinja")
-        message = response_template.render(
-            success=False,
-            error_message=f"Failed to update item: {str(e)}"
-        )
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-        )
-
 @app.put("/monday/item/update")
-async def create_update_item(request: Request) -> OutputModel:
+async def update_item(request: Request) -> OutputModel:
     """
     Update a Monday.com item's or sub-item's column values.
 
@@ -326,58 +297,22 @@ async def create_update_item(request: Request) -> OutputModel:
     Returns:
         Response with the updated item details.
     """
-    
     invocation_id = str(uuid4())
-    headers = {"Accept": "application/json"}
     data = await request.json()
-    params = CreateUpdateItemParams(**data)
-    instance_url = os.getenv("MONDAY_INSTANCIA")
+    params = UpdateItemParams(**data)
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     
-    # Build request data
-    data = {}
 
-    if params.board_id:
-        data["board_id"] = params.board_id
-    if params.item_id:
-        data["item_id"] = params.item_id     
-    if params.monday_client:
-        data["monday_client"] = params.monday_client
-    if params.columns_values:
-        data["columns_values"] = params.columns_values
+    response = monday_client.items.change_multiple_column_values(
+        board_id=params.board_id, item_id=params.item_id, column_values=params.columns_values
+    )
 
-    # Make request
-    try:
-        response = requests.put(           
-            json=data,
-            headers=headers,
-            auth=HTTPBasicAuth(os.getenv("MONDAY_USUARIO"), os.getenv("MONDAY_CONTRASENA"))
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", {})
-
-        response_template = template_env.get_template("response_template_item_updated.jinja")
-        rendered_response = response_template.render(
-            success=True,
-            item_id=result.get("item_id"),
-            board_id=result.get("board_id")
-        )
-
-        return OutputModel(
-            status="success",
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=rendered_response)]
-        )
-
-    except requests.RequestException as e:
-        response_template = template_env.get_template("response_template_item_updated.jinja")
-        message = response_template.render(
-            success=False,
-            error_message=f"Failed to update item: {str(e)}"
-        )
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
+    message = f"Updated Monday.com item. {params.item_id} on board Id: {params.board_id}."  
+    # Faltan los valores de las columnas 
+        
+    return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
         )
 
 #monday-add-doc-block: Adds a block to an existing document
