@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,CreateSubItemParams
 #, CreateUpdateParams, CreateUpdateItemParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -204,7 +204,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     board = monday_client.boards.fetch_items_by_board_id(
         board_ids= params.board_id
     )    
-    #print(board)
+    print(board)
     #print(board["data"])
     message = f"Informacion del Board id: {params.board_id}"
     
@@ -296,21 +296,27 @@ async def create_item(request: Request) -> OutputModel:
     """
     invocation_id = str(uuid4())
     data = await request.json()
-    params = CreateItemParams(**data)
+    params = None
     monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-     
-    if params.parent_item_id is None and params.group_id is not None:
+
+    #if params.parent_item_id is None and params.group_id is not None:
+    if "board_id" in data:
+        logger.info("Creacion item")
+        params = CreateItemParams(**data)
         response = monday_client.items.create_item(
             board_id=params.board_id,
             group_id=params.group_id,
             item_name=params.item_name,
             column_values=params.columns_values,
         )
-    elif params.parent_item_id is not None and params.group_id is None:
+    #elif params.parent_item_id is not None and params.group_id is None:
+    elif "parent_item_id" in data:
+        logger.info("Creacion sub item")
+        params = CreateSubItemParams(**data)
         response = monday_client.items.create_subitem(
             parent_item_id=params.parent_item_id,
             subitem_name=params.item_name,
-            column_values=params.columns_values,
+            column_values=params.columns_values
         )
     else:
 
