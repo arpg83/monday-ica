@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId
 #, CreateUpdateParams, CreateUpdateItemParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -445,9 +445,10 @@ async def create_update_on_item(
     ]
 '''
 
+
 @app.delete("/monday/item/delete")
 async def delete_item_by_id(request: Request) -> OutputModel:
-    
+    """Delete item by id args item_id"""
     invocation_id = str(uuid4())
     data = await request.json()
     params = None
@@ -482,7 +483,49 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
+@app.post("/monday/item/move_item_to_group")
+async def move_item_to_group(request: Request) -> OutputModel:
+    """Move item to another group"""
+    #monday-move-item-to-group
+    invocation_id = str(uuid4())
+    data = await request.json()
+    params = None
+    try:
+        params = MoveItemToGroupId(**data)
+    except Exception as e:
+        message = f"Error moving item to another group on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    response = None
+    try:
+        #llamada al servicio de monday
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+        response = monday_client.items.move_item_to_group(
+            item_id= params.item_id,
+            group_id= params.group_id
+        )
+        #Imprimo la respuesta
+        logger.info(response)
+    except Exception as e:
+        message = f"Error moving item to another group on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")
+        message = f"Moved item {response['data']['move_item_to_group']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
 
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000, log_level="info")

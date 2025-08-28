@@ -124,3 +124,7 @@ class FetchItemsByBoardId(BaseModel):
 
 class DeleteItemByIdParams(BaseModel):
     item_id:str
+
+class MoveItemToGroupId(BaseModel):
+    item_id:str
+    group_id:str
