@@ -114,6 +114,7 @@ class DeleteItemByIdParams(BaseModel):
     item_id:str
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 class MoveItemToGroupId(BaseModel):
     item_id:str
     group_id:str
@@ -126,5 +127,7 @@ class CreateColumn(BaseModel):
     column_title:str
     column_type:columnType
     defaults: Optional[object] = None
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes

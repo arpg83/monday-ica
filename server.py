@@ -13,8 +13,12 @@ from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn
 #, CreateUpdateParams, CreateUpdateItemParams
+=======
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId, CreateUpdateCommentParams
+>>>>>>> Stashed changes
 =======
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId, CreateUpdateCommentParams
 >>>>>>> Stashed changes
@@ -270,7 +274,11 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #    )
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 #monday-create-board-group: Creates a new group in a Monday.com board
+=======
+#monday-create-board-group: Creates a new group in a Monday.com board    
+>>>>>>> Stashed changes
 =======
 #monday-create-board-group: Creates a new group in a Monday.com board    
 >>>>>>> Stashed changes
@@ -475,6 +483,7 @@ async def create_update_comment(request: Request) -> OutputModel:
         message = f"Created new update on Monday.com item: {response['data']['create_update']['id']}"
     else:
         logger.info("sin respuesta")
+<<<<<<< Updated upstream
 
     return OutputModel(
             invocationId=invocation_id,
@@ -505,6 +514,38 @@ async def update_item(request: Request) -> OutputModel:
     data = await request.json()
     params = None  
 
+=======
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
+#monday-update-item: Update a Monday.com item's or sub-item's column values. 
+@app.put("/monday/item/update")
+async def update_item(request: Request) -> OutputModel:
+    '''Update a Monday.com item's or sub-item's column values.
+
+    Args:
+        boardId: Monday.com Board ID that the Item or Sub-item is on.
+        itemId: Monday.com Item or Sub-item ID to update the columns of.
+        columnValues: Dictionary of column values to update the Monday.com Item or Sub-item with. ({column_id: value}).
+    '''
+ 
+    invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None  
+
+>>>>>>> Stashed changes
     try:
         params = UpdateItemParams(**data)
     except Exception as e:
@@ -547,6 +588,7 @@ async def update_item(request: Request) -> OutputModel:
 
 #monday-delete-item: Deletes a Monday.com item
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 '''
 async def create_update_on_item(
     itemId: str,
@@ -562,6 +604,8 @@ async def create_update_on_item(
 '''
 
 #monday-delete-item: Deletes a Monday.com item
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 @app.delete("/monday/item/delete")
