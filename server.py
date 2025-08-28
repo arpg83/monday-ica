@@ -537,6 +537,8 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
+
+#monday-move-item-to-group: Moves a Monday.com item to a different group
 @app.post("/monday/item/move_item_to_group")
 async def move_item_to_group(request: Request) -> OutputModel:
     """Move item to another group"""
