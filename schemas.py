@@ -128,3 +128,12 @@ class DeleteItemByIdParams(BaseModel):
 class MoveItemToGroupId(BaseModel):
     item_id:str
     group_id:str
+
+class columnType(BaseModel):
+    value:str
+
+class CreateColumn(BaseModel):
+    board_id:str
+    column_title:str
+    column_type:columnType
+    defaults: Optional[object] = None

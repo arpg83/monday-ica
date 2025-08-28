@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn
 #, CreateUpdateParams, CreateUpdateItemParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -498,7 +498,8 @@ async def delete_item_by_id(request: Request) -> OutputModel:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
-        invocationId=invocation_id,        
+        invocationId=invocation_id,
+        status="error",        
         response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
     )
 
@@ -510,6 +511,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             message = f"Error deleting Monday.com item: {e}"
             return OutputModel(
                     invocationId=invocation_id,
+                    status="error",
                     response=[ResponseMessageModel(message=message)]
             )
     response = None
@@ -522,6 +524,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             message = f"Error deleting Monday.com item: {e}"
             return OutputModel(
                     invocationId=invocation_id,
+                    status="error",
                     response=[ResponseMessageModel(message=message)]
             )
     if not response is None:
@@ -539,13 +542,13 @@ async def move_item_to_group(request: Request) -> OutputModel:
     """Move item to another group"""
     #monday-move-item-to-group
     invocation_id = str(uuid4())
-
     try: 
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
-        invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+        invocationId=invocation_id,
+        status="error",
+        response=[ResponseMessageModel(message="Connection error with Monday Client: {e}")]
     )
 
     data = await request.json()
@@ -556,6 +559,7 @@ async def move_item_to_group(request: Request) -> OutputModel:
         message = f"Error moving item to another group on Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
+                status="error",
                 response=[ResponseMessageModel(message=message)]
         )
     response = None
@@ -571,6 +575,7 @@ async def move_item_to_group(request: Request) -> OutputModel:
         message = f"Error moving item to another group on Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
+                status="error",
                 response=[ResponseMessageModel(message=message)]
         )
     message = ""
@@ -578,6 +583,70 @@ async def move_item_to_group(request: Request) -> OutputModel:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
         message = f"Moved item {response['data']['move_item_to_group']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
+#El create column lo cree por curiosidad pero me da problemas al establecer el tipo de columna Actualmente no funciona
+#create_column
+@app.post("/monday/columns/create")
+async def column_create(request: Request) -> OutputModel:
+    """Create column args: board_id, column_title, column_type, defaults"""
+    #Creo un identificador unico
+    invocation_id = str(uuid4())
+    try: 
+        #Abro conexion
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        status="error",
+        response=[ResponseMessageModel(message="Connection error with Monday Client: {e}")]
+    )
+    #Traigo losd atos del request
+    data = await request.json()
+    params = None
+    try:
+        #parseo los datos del request
+        logger.info("Parse input")
+        params = CreateColumn(**data)
+    except Exception as e:
+        message = f"Error on create column on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    response = None
+    #llamada al servicio de monday
+    #Imprimo la respuesta
+    try:
+        logger.info("Ejecuta api monday")
+        response = monday_client.columns.create_column(
+            board_id= params.board_id,
+            column_title= params.column_title,
+            #column_type= params.column_type
+            #,#No logro identificar el valor del tipo de columna para que pueda crearla
+            #column_type= 0,
+            #defaults= params.defaults
+        )
+        logger.info(response)
+    except Exception as e:
+        message = f"Error on create column on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")
+        #message = f"Sucessfull create column {response['data']['move_item_to_group']['id']} Monday.com item"
     else:
         logger.info("sin respuesta")
 
