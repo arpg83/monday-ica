@@ -121,3 +121,6 @@ class DeleteItemParams(BaseModel):
    
 class FetchItemsByBoardId(BaseModel):
     board_id:str
+
+class DeleteItemByIdParams(BaseModel):
+    item_id:str

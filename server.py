@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams
 #, CreateUpdateParams, CreateUpdateItemParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -450,18 +450,37 @@ async def delete_item_by_id(request: Request) -> OutputModel:
     
     invocation_id = str(uuid4())
     data = await request.json()
-    params = FetchItemsByBoardId(**data)
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-
-    response = monday_client.items.delete_item_by_id(
-        item_id= params.item_id
-    )
-
-    message = ""
-    
-    return OutputModel(
+    params = None
+    try:
+        params = DeleteItemByIdParams(**data)
+    except Exception as e:
+            message = f"Error deleting Monday.com item: {e}"
+            return OutputModel(
                     invocationId=invocation_id,
                     response=[ResponseMessageModel(message=message)]
+            )
+    response = None
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+        response = monday_client.items.delete_item_by_id(
+            item_id= params.item_id
+        )
+        logger.info(response)
+    except Exception as e:
+            message = f"Error deleting Monday.com item: {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
+            )
+    if not response is None:
+        logger.info("Procesa respuesta")
+        message = f"Deleted item {response['data']['delete_item']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
+    
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
         )
 
 
