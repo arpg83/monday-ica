@@ -12,20 +12,12 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn
-#, CreateUpdateParams, CreateUpdateItemParams
-=======
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId, CreateUpdateCommentParams
->>>>>>> Stashed changes
-=======
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId, CreateUpdateCommentParams
->>>>>>> Stashed changes
+
 from monday import MondayClient
 from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
-
 
 load_dotenv()
 
@@ -46,6 +38,18 @@ T = TypeVar('T', bound=BaseModel)
 
 app = FastAPI()
 
+#___________________________ Metodos pendientes ______________________________________________________________
+#monday-get-item-updates: Retrieves updates/comments for a specific item
+#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
+#monday-get-doc-content: Retrieves the content of a specific document
+#monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
+#monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
+#monday-add-doc-block: Adds a block to an existing document
+#monday-archive-item: Archives a Monday.com item
+#______________________________________________________________________________________________________________
+
+
+#monday-list-boards: Lists all available Monday.com boards
 @app.post("/monday/boards/list")
 async def listBoards(request: Request) -> OutputModel:    
     """
@@ -81,6 +85,7 @@ async def listBoards(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
+#monday-list-users: Lists all available Monday.com users
 @app.get("/monday/users/list")
 async def listUsers(request: Request) -> OutputModel:
     """
@@ -114,17 +119,6 @@ async def listUsers(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
     )
-
-#monday-get-item-updates: Retrieves updates/comments for a specific item
-#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
-#monday-get-doc-content: Retrieves the content of a specific document
-#monday-list-boards: Lists all available Monday.com boards
-#monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
-#monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
-#monday-create-doc: Creates a new document in Monday.com
-#monday-add-doc-block: Adds a block to an existing document
-#monday-archive-item: Archives a Monday.com item
-
 
 #monday-get-board-groups: Retrieves all groups from a specified Monday.com board
 @app.get("/monday/board_groups/get")
@@ -273,15 +267,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #        headers=headers
 #    )
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-#monday-create-board-group: Creates a new group in a Monday.com board
-=======
 #monday-create-board-group: Creates a new group in a Monday.com board    
->>>>>>> Stashed changes
-=======
-#monday-create-board-group: Creates a new group in a Monday.com board    
->>>>>>> Stashed changes
 @app.post("/monday/board_group/create")
 async def create_board_group(request: Request) -> OutputModel:
     """
@@ -315,12 +301,6 @@ async def create_board_group(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
     )
-
-@app.post("/monday/doc/create")
-async def create_doc(request: Request) -> OutputModel:
-    '''
-    
-    '''
 
 #monday-create-item: Creates a new item or sub-item in a Monday.com board
 @app.post("/monday/item/create")
@@ -483,7 +463,6 @@ async def create_update_comment(request: Request) -> OutputModel:
         message = f"Created new update on Monday.com item: {response['data']['create_update']['id']}"
     else:
         logger.info("sin respuesta")
-<<<<<<< Updated upstream
 
     return OutputModel(
             invocationId=invocation_id,
@@ -514,38 +493,6 @@ async def update_item(request: Request) -> OutputModel:
     data = await request.json()
     params = None  
 
-=======
-
-    return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-        )
-
-#monday-update-item: Update a Monday.com item's or sub-item's column values. 
-@app.put("/monday/item/update")
-async def update_item(request: Request) -> OutputModel:
-    '''Update a Monday.com item's or sub-item's column values.
-
-    Args:
-        boardId: Monday.com Board ID that the Item or Sub-item is on.
-        itemId: Monday.com Item or Sub-item ID to update the columns of.
-        columnValues: Dictionary of column values to update the Monday.com Item or Sub-item with. ({column_id: value}).
-    '''
- 
-    invocation_id = str(uuid4())
-
-    try: 
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-    except requests.RequestException as e:
-        return OutputModel(
-        invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
-    )
-
-    data = await request.json()
-    params = None  
-
->>>>>>> Stashed changes
     try:
         params = UpdateItemParams(**data)
     except Exception as e:
@@ -587,27 +534,6 @@ async def update_item(request: Request) -> OutputModel:
         )
 
 #monday-delete-item: Deletes a Monday.com item
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-'''
-async def create_update_on_item(
-    itemId: str,
-    updateText: str,
-    monday_client: MondayClient,
-) -> list[types.TextContent]:
-    monday_client.updates.create_update(item_id=itemId, update_value=updateText)
-    return [
-        types.TextContent(
-            type="text", text=f"Created new update on Monday.com item: {updateText}"
-        )
-    ]
-'''
-
-#monday-delete-item: Deletes a Monday.com item
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 @app.delete("/monday/item/delete")
 async def delete_item_by_id(request: Request) -> OutputModel:
     """Delete item by id args item_id"""
@@ -775,6 +701,20 @@ async def column_create(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
+
+
+
+#___________________________ Myrian Workspace ______________________________________________________________
+#monday-create-doc: Creates a new document in Monday.com
+@app.post("/monday/doc/create")
+async def create_doc(request: Request) -> OutputModel:
+    '''
+    
+    '''
+#___________________________________________________________________________________________________________
+
+#___________________________ Luciano Workspace ______________________________________________________________
+#___________________________________________________________________________________________________________
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000, log_level="info")
