@@ -85,8 +85,15 @@ async def listUsers(request: Request) -> OutputModel:
         
     """
     invocation_id = str(uuid4())
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-
+       
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )    
+      
     response = monday_client.users.fetch_users()
     users = response["data"]["users"]
     users_list = "\n".join(
@@ -169,7 +176,14 @@ async def create_board(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = CreateBoardParams(**data)
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
 
     actual_board_kind = BoardKind(params.board_kind)
     board = monday_client.boards.create_board(
@@ -197,8 +211,15 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = FetchItemsByBoardId(**data)
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
 
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+    
     board = monday_client.boards.fetch_items_by_board_id(
         board_ids= params.board_id
     )    
@@ -263,7 +284,14 @@ async def create_board_group(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = CreateBoardGroupParams(**data)
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
 
     group = monday_client.groups.create_group(board_id=params.board_id, group_name=params.group_name)
     
@@ -295,7 +323,15 @@ async def create_item(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = None
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
     message = ""
     response = None
     params = None
@@ -411,7 +447,14 @@ async def update_item(request: Request) -> OutputModel:
     invocation_id = str(uuid4())
     data = await request.json()
     params = UpdateItemParams(**data)
-    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
     
 
     response = monday_client.items.change_multiple_column_values(
@@ -450,6 +493,15 @@ async def create_update_on_item(
 async def delete_item_by_id(request: Request) -> OutputModel:
     """Delete item by id args item_id"""
     invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
     data = await request.json()
     params = None
     try:
@@ -462,7 +514,6 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             )
     response = None
     try:
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
         response = monday_client.items.delete_item_by_id(
             item_id= params.item_id
         )
@@ -488,6 +539,15 @@ async def move_item_to_group(request: Request) -> OutputModel:
     """Move item to another group"""
     #monday-move-item-to-group
     invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
     data = await request.json()
     params = None
     try:
@@ -501,7 +561,6 @@ async def move_item_to_group(request: Request) -> OutputModel:
     response = None
     try:
         #llamada al servicio de monday
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
         response = monday_client.items.move_item_to_group(
             item_id= params.item_id,
             group_id= params.group_id
