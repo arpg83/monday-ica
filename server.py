@@ -12,7 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,CreateSubItemParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId
 #, CreateUpdateParams, CreateUpdateItemParams
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -186,11 +186,10 @@ async def create_board(request: Request) -> OutputModel:
 @app.post("/monday/board/fetch_items_by_board_id")
 async def fetch_items_by_board_id(request: Request) -> OutputModel:
     """
-    Create a new Monday.com board.
+    fetch items by borard id
 
     Args:
-        board_name (str): The name of the board.
-        board_kind (str): The kind of board to create. Must be one of "public" or "private".
+        board_id (str): The id of the board.
 
     Returns:
 
@@ -200,11 +199,10 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     params = FetchItemsByBoardId(**data)
     monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
 
-    
     board = monday_client.boards.fetch_items_by_board_id(
         board_ids= params.board_id
     )    
-    print(board)
+    logger.debug(board)
     #print(board["data"])
     message = f"Informacion del Board id: {params.board_id}"
     
@@ -300,49 +298,73 @@ async def create_item(request: Request) -> OutputModel:
     monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     message = ""
     response = None
-    #if params.parent_item_id is None and params.group_id is not None:
-    if "board_id" in data:
-        logger.info("Creacion item")
+    params = None
+    try:
         params = CreateItemParams(**data)
-        response = monday_client.items.create_item(
-            board_id=params.board_id,
-            group_id=params.group_id,
-            item_name=params.item_name,
-            column_values=params.columns_values,
+    except Exception as e:
+        message = f"Error creating Monday.com item: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
         )
-        logger.info(response)
-    #elif params.parent_item_id is not None and params.group_id is None:
-    elif "parent_item_id" in data:
+    if params.parent_item_id is None and params.group_id is not None:
+    #if "board_id" in data:
+        logger.info("Creacion item")
+        try:
+            response = monday_client.items.create_item(
+                board_id=params.board_id,
+                group_id=params.group_id,
+                item_name=params.item_name,
+                column_values=params.columns_values,
+            )
+            logger.info(response)
+        except Exception as e:
+
+            message = f"Error creating Monday.com item: {e}"
+
+            return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
+            )
+    elif params.parent_item_id is not None and params.group_id is None:
+    #elif "parent_item_id" in data:
         logger.info("Creacion sub item")
-        params = CreateSubItemParams(**data)
-        response = monday_client.items.create_subitem(
-            parent_item_id=params.parent_item_id,
-            subitem_name=params.item_name,
-            column_values=params.columns_values
-        )
-        logger.info(response)
+        try:
+            response = monday_client.items.create_subitem(
+                parent_item_id=params.parent_item_id,
+                subitem_name=params.item_name,
+                column_values=params.columns_values
+            )
+            logger.info(response)
+        except Exception as e:
+
+            message = f"Error creating Monday.com item: {e}"
+
+            return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
+            )
     else:
-
         message = "You can set either Group ID or Parent Item ID argument, but not both."
-
         return OutputModel(
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
 
     try:
+        #hay dos tipos de response posibles el la creacion del item y el de la creacion del sub item validar que tipo de response es antes de mapear la respuesta
         data = response["data"]
         #id_key = "create_item" if params.parent_item_id is None else "create_subitem"
         #item_url = f"{MONDAY_WORKSPACE_URL}/boards/{params.board_id}/pulses/{data.get(id_key).get('id')}"
 
-        #if params.parent_item_id is None and params.group_id is not None:
-        if "board_id" in data:
+        if params.parent_item_id is None and params.group_id is not None:
+        #if "board_id" in data:
             message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id} and group Id: {params.group_id}."   
-        #elif params.parent_item_id is not None and params.group_id is None:
-        elif "parent_item_id" in data:
+        elif params.parent_item_id is not None and params.group_id is None:
+        #elif "parent_item_id" in data:
              message = f"Created a new Monday.com sub item: {params.parent_item_id} on board Id: {params.board_id}."       
-        #else:
-        #    message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."       
+        else:
+            message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."
 
         return OutputModel(
                     invocationId=invocation_id,
@@ -422,5 +444,26 @@ async def create_update_on_item(
         )
     ]
 '''
+
+@app.delete("/monday/item/delete")
+async def delete_item_by_id(request: Request) -> OutputModel:
+    
+    invocation_id = str(uuid4())
+    data = await request.json()
+    params = FetchItemsByBoardId(**data)
+    monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+
+    response = monday_client.items.delete_item_by_id(
+        item_id= params.item_id
+    )
+
+    message = ""
+    
+    return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message=message)]
+        )
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000, log_level="info")

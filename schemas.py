@@ -25,17 +25,17 @@ class CreateBoardGroupParams(BaseModel):
     group_name: str
 
 class CreateItemParams(BaseModel):
-    board_id: str
     item_name: str
+    board_id: Optional[str] = None
     group_id: Optional[str] = None
     parent_item_id: Optional[str] = None
     columns_values: Optional[dict] = None
 
-class CreateSubItemParams(BaseModel):
-    parent_item_id: Optional[str] = None
-    item_name: str
-    group_id: Optional[str] = None
-    columns_values: Optional[dict] = None
+#class CreateSubItemParams(BaseModel):
+#    parent_item_id: Optional[str] = None
+#    item_name: str
+#    group_id: Optional[str] = None
+#    columns_values: Optional[dict] = None
 
 class CreateUpdateCommentParams(BaseModel):
     item_id: str
