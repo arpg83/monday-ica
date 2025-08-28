@@ -267,7 +267,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #        headers=headers
 #    )
 
-    
+#monday-create-board-group: Creates a new group in a Monday.com board
 @app.post("/monday/board_group/create")
 async def create_board_group(request: Request) -> OutputModel:
     """
@@ -488,7 +488,7 @@ async def create_update_on_item(
     ]
 '''
 
-
+#monday-delete-item: Deletes a Monday.com item
 @app.delete("/monday/item/delete")
 async def delete_item_by_id(request: Request) -> OutputModel:
     """Delete item by id args item_id"""
