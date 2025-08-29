@@ -13,7 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -40,7 +40,7 @@ app = FastAPI()
 
 #___________________________ Metodos pendientes ______________________________________________________________
 #monday-get-item-updates: Retrieves updates/comments for a specific item
-#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
+#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 #monday-get-doc-content: Retrieves the content of a specific document
 #monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
 #monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
@@ -538,7 +538,7 @@ async def update_item(request: Request) -> OutputModel:
 async def delete_item_by_id(request: Request) -> OutputModel:
     """Delete item by id args item_id"""
     invocation_id = str(uuid4())
-
+    monday_client = None
     try: 
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
@@ -589,7 +589,8 @@ async def move_item_to_group(request: Request) -> OutputModel:
     """Move item to another group"""
     #monday-move-item-to-group
     invocation_id = str(uuid4())
-    try: 
+    monday_client = None
+    try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
@@ -630,6 +631,120 @@ async def move_item_to_group(request: Request) -> OutputModel:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
         message = f"Moved item {response['data']['move_item_to_group']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
+#monday-get-item-updates: Retrieves updates/comments for a specific item
+@app.post("/monday/item/get_item_updates")
+async def get_item_updates(request: Request) -> OutputModel:
+    """Retrieves updates/comments for a specific item"""
+    #monday-move-item-to-group
+    #genera id unico
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",
+        response=[ResponseMessageModel(message="Connection error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = GetItemComentsParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error get item on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    response = None
+    try:
+        #llamada al servicio de monday
+        response = monday_client.updates.fetch_updates_for_item(
+            item_id=params.item_id,
+            limit=params.limit
+        )
+        #Imprimo la respuesta
+        logger.info(response)
+    except Exception as e:
+        message = f"Error  get item on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")
+        #message = f"Moved item {response['data']['items']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
+@app.post("/monday/item/get_item_by_id")
+async def get_item_by_id(request: Request) -> OutputModel:
+    """Retrieves updates/comments for a specific item"""
+    #monday-move-item-to-group
+    #genera id unico
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",
+        response=[ResponseMessageModel(message="Connection error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = GetItemById(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error get item on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    response = None
+    try:
+        #llamada al servicio de monday
+        response = monday_client.items.fetch_items_by_id(
+            ids = params.items_id
+        )
+        #Imprimo la respuesta
+        logger.info(response)
+    except Exception as e:
+        message = f"Error  get item on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")
+        message = f"Get item {response['data']['items']['id']} Monday.com item"
     else:
         logger.info("sin respuesta")
 

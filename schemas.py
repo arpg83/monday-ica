@@ -117,6 +117,13 @@ class MoveItemToGroupId(BaseModel):
     item_id:str
     group_id:str
 
+class GetItemComentsParams(BaseModel):
+    item_id:str
+    limit:int
+
+class GetItemById(BaseModel):
+    items_id:str
+
 class columnType(BaseModel):
     value:str
 
