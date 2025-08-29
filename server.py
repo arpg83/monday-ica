@@ -227,32 +227,80 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     logger.debug(board)
     #print(board["data"])
     message = f"Informacion del Board id: {params.board_id}"
-    
-    for board in board["data"]["boards"]:
-        board_name = board["name"]
-        logger.info(board)
-        logger.info(board_name)
-        message = f"{message}  Board: {board_name}"
-        items_page = board["items_page"]
-        if "cursor" in items_page:
-            cursor = items_page["cursor"]
-            message = f"{message}  Cursor: {cursor}"
-            items = items_page["items"]
-            for item in items:
-                group = item["group"]
-                column_values = item["column_values"]
-                id = item["id"]
-                name = item["name"]
-                logger.info(name)
-                message = f"{message}  item name: {name}"
-                message = f"{message}  id: {id}"
-                if "column_values" in item:
-                    column_values = item["column_values"]
-                    for column in column_values:
-                        col_id = column["id"]
-                        text = column["text"]
-                        message = f"{message}  Column id: {col_id}"
-                        message = f"{message}  Column text: {text}"
+    boards = board["data"]["boards"]
+    for board in boards:
+        props_bard = dict_list_prop_id(board)
+        logger.debug(props_bard)
+        for prop_board in props_bard:
+            if prop_board == 'items_page':
+                dict_items_page = board[prop_board] 
+                logger.debug(dict_items_page)
+                props_items_page = dict_list_prop_id(dict_items_page)
+                for prop_item_page in props_items_page:
+                    logger.debug(prop_item_page)
+                    if prop_item_page == 'items':
+                        dict_items = dict_items_page[prop_item_page]
+                        groups = dict_get_array(dict_items)
+                        for group in groups:
+                            logger.info("group--")
+                            logger.debug(group)
+                            group_props = dict_list_prop_id(group)
+                            for group_prop in group_props:
+                                if group_prop == 'column_values':
+                                    logger.info("columnas")
+                                    dict_columnas = group[group_prop]
+                                    columnas = dict_get_array(dict_columnas)
+                                    for columna in columnas:
+                                        logger.info(columna)
+                                        columna_props = dict_list_prop_id(columna)
+                                        for columna_prop in columna_props:
+                                            logger.info(columna_prop)
+                                            if columna_prop == 'value':
+                                                logger.info(columna[columna_prop])
+                                            else:
+                                                logger.info(columna[columna_prop])
+                                                message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
+                                elif group_prop == 'group':
+                                    logger.info(group_prop)
+                                    #logger.info(group[group_prop])
+                                    desc_props = group[group_prop]
+                                    group_desc_props = dict_list_prop_id(desc_props)
+                                    for group_desc_prop in group_desc_props:
+                                        message = f"{message}  {group_desc_prop}: {desc_props[group_desc_prop]}"
+                                else:
+                                    logger.debug(group_prop)
+                                    logger.debug(group[group_prop])
+                                    message = f"{message}  {group_prop}: {group[group_prop]}"
+
+                    else:
+                        message = f"{message}  {prop_item_page}: {dict_items_page[prop_item_page]}"
+
+            else:
+                message = f"{message}  {prop_board}: {board[prop_board]}"
+
+#        logger.info(board)
+#        logger.info(board_name)
+#        message = f"{message}  Board: {board_name}"
+#        items_page = board["items_page"]
+#        if "cursor" in items_page:
+#            cursor = items_page["cursor"]
+#            message = f"{message}  Cursor: {cursor}"
+#            items = items_page["items"]
+#            for item in items:
+#                group = item["group"]
+#                column_values = item["column_values"]
+#                id = item["id"]
+#                name = item["name"]
+#                logger.info(name)
+#                message = f"{message}  item name: {name}"
+#                message = f"{message}  id: {id}"
+#                if "column_values" in item:
+#                    column_values = item["column_values"]
+#                    for column in column_values:
+#                        col_id = column["id"]
+#                        text = column["text"]
+#                        message = f"{message}  Column id: {col_id}"
+#                        message = f"{message}  Column text: {text}"
 
     return OutputModel(
             invocationId=invocation_id,
