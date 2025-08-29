@@ -23,7 +23,7 @@ load_dotenv()
 
 logging.basicConfig(
 
-    level=logging.INFO,
+    level=logging.DEBUG,
 
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 
@@ -676,7 +676,7 @@ async def get_item_updates(request: Request) -> OutputModel:
             limit=params.limit
         )
         #Imprimo la respuesta
-        logger.info(response)
+        logger.debug(response)
     except Exception as e:
         message = f"Error  get item on Monday.com: {e}"
         return OutputModel(
@@ -688,7 +688,31 @@ async def get_item_updates(request: Request) -> OutputModel:
     if not response is None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
-        #message = f"Moved item {response['data']['items']['id']} Monday.com item"
+        message = "item updates: "
+        for item in response['data']['items']:
+            logger.debug(item['updates'])
+            updates = item['updates']
+            for update in updates:
+                for id_prop in update:
+                    if id_prop == 'id':
+                        message = f"{message} id {update[id_prop]}"
+                    if id_prop == 'body':
+                        message = f"{message} message {update[id_prop]}"
+                    if id_prop == 'created_at':
+                        message = f"{message} created at {update[id_prop]}"
+                    if id_prop == 'updated_at':
+                        message = f"{message} updated at {update[id_prop]}"
+                    if id_prop == 'creator':
+                        for id_prop_b in update[id_prop]:
+                            logging.debug(id_prop_b)
+                            if id_prop_b == 'id':
+                                message = f"{message} id: {update[id_prop][id_prop_b]}"
+                            if id_prop_b == 'name':
+                                message = f"{message} name: {update[id_prop][id_prop_b]}"
+                            if id_prop_b == 'email':
+                                message = f"{message} email: {update[id_prop][id_prop_b]}"
+
+        message = f"{message} Monday.com"
     else:
         logger.info("sin respuesta")
 
