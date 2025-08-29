@@ -12,6 +12,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
+from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
 from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById
 
@@ -23,7 +24,7 @@ load_dotenv()
 
 logging.basicConfig(
 
-    level=logging.DEBUG,
+    level=logging.INFO,
 
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 
@@ -689,28 +690,22 @@ async def get_item_updates(request: Request) -> OutputModel:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
         message = "item updates: "
-        for item in response['data']['items']:
+        items = response['data']['items']
+        for item in items:
             logger.debug(item['updates'])
             updates = item['updates']
-            for update in updates:
-                for id_prop in update:
-                    if id_prop == 'id':
-                        message = f"{message} id {update[id_prop]}"
-                    if id_prop == 'body':
-                        message = f"{message} message {update[id_prop]}"
-                    if id_prop == 'created_at':
-                        message = f"{message} created at {update[id_prop]}"
-                    if id_prop == 'updated_at':
-                        message = f"{message} updated at {update[id_prop]}"
-                    if id_prop == 'creator':
-                        for id_prop_b in update[id_prop]:
-                            logging.debug(id_prop_b)
-                            if id_prop_b == 'id':
-                                message = f"{message} id: {update[id_prop][id_prop_b]}"
-                            if id_prop_b == 'name':
-                                message = f"{message} name: {update[id_prop][id_prop_b]}"
-                            if id_prop_b == 'email':
-                                message = f"{message} email: {update[id_prop][id_prop_b]}"
+            for update in dict_get_array(updates):
+                logger.debug(update)
+                for prop_id in dict_list_prop_id(update):
+                    logger.debug(prop_id)
+                    if prop_id == 'creator':
+                        creator = update[prop_id]
+                        props_id_b = dict_list_prop_id(creator)
+                        logger.debug(props_id_b)
+                        for prop_id_b in props_id_b:
+                            message = f"{message} {prop_id_b}: {creator[prop_id_b]}"
+                    else:
+                        message = f"{message} {prop_id}: {update[prop_id]}"
 
         message = f"{message} Monday.com"
     else:
@@ -720,6 +715,7 @@ async def get_item_updates(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
+
 
 @app.post("/monday/item/get_item_by_id")
 async def get_item_by_id(request: Request) -> OutputModel:
@@ -741,7 +737,7 @@ async def get_item_by_id(request: Request) -> OutputModel:
     params = None
     try:
         params = GetItemById(**data)
-        logger.info(params)
+        logger.debug(params)
     except Exception as e:
         message = f"Error get item on Monday.com: {e}"
         return OutputModel(
@@ -756,7 +752,7 @@ async def get_item_by_id(request: Request) -> OutputModel:
             ids = params.items_id
         )
         #Imprimo la respuesta
-        logger.info(response)
+        logger.debug(response)
     except Exception as e:
         message = f"Error  get item on Monday.com: {e}"
         return OutputModel(
@@ -767,10 +763,27 @@ async def get_item_by_id(request: Request) -> OutputModel:
     message = ""
     if not response is None:
         #Genero el mensaje de salida
-        logger.info("Procesa respuesta")
-        message = f"Get item {response['data']['items']['id']} Monday.com item"
+        #logger.debug("Procesa respuesta")
+        data = dict_read_property(response,'data')
+        #logger.debug(data)
+        items = dict_read_property(data,'items')
+        #logger.debug(dict_read_property_into_array(items,'id'))
+        #logger.debug(dict_read_property_into_array(items,'name'))
+        columns = dict_read_property_into_array(items,'column_values')
+        #logger.info(columns)
+        arr_cols = dict_get_array(columns)
+        #logger.info(dict_read_property_into_array(columns,'id'))
+        message = f"Get item id {dict_read_property_into_array(items,'id')} item name: {dict_read_property_into_array(items,'name')}"
+        for item_arr in arr_cols:
+            logger.info(item_arr)
+            message = f"{message} Column: "
+            for prop_id in dict_list_prop_id(item_arr):
+                logger.info(prop_id)
+                message = f"{message} {prop_id}: {dict_read_property(item_arr,prop_id)}"
+
+        message = f"{message} Monday.com item"
     else:
-        logger.info("sin respuesta")
+        logger.debug("sin respuesta")
 
     return OutputModel(
             invocationId=invocation_id,
@@ -820,7 +833,7 @@ async def column_create(request: Request) -> OutputModel:
             #column_type= 0,
             #defaults= params.defaults
         )
-        logger.info(response)
+        logger.debug(response)
     except Exception as e:
         message = f"Error on create column on Monday.com: {e}"
         return OutputModel(
