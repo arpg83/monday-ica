@@ -23,6 +23,7 @@ def dict_list_prop_id(item):
     array = []
     #for arr_item in item:
         #print(arr_item)
-    for id_prop_act in item:
-        array.append(id_prop_act)
+    if not item == None:
+        for id_prop_act in item:
+            array.append(id_prop_act)
     return array

@@ -212,8 +212,17 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 
     """
     invocation_id = str(uuid4())
+
     data = await request.json()
-    params = FetchItemsByBoardId(**data)
+    params = None
+    monday_client = None
+    try:
+        params = FetchItemsByBoardId(**data)
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
 
     try: 
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
@@ -222,11 +231,16 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
         invocationId=invocation_id,        
         response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
     )
-    
-    board = monday_client.boards.fetch_items_by_board_id(
-        board_ids= params.board_id
-    )    
-    logger.debug(board)
+    try:
+        board = monday_client.boards.fetch_items_by_board_id(
+            board_ids= params.board_id
+        )
+        logger.debug(board)
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="llamada al servicio Monday Client: {e}")]
+    )
     #print(board["data"])
     message = f"Informacion del Board id: {params.board_id}"
     boards = board["data"]["boards"]
@@ -258,7 +272,17 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                                         for columna_prop in columna_props:
                                             logger.info(columna_prop)
                                             if columna_prop == 'value':
-                                                logger.info(columna[columna_prop])
+                                                dict_values = columna[columna_prop]
+                                                logger.info(columna_prop)
+                                                logger.info(dict_values)
+                                                values = dict_list_prop_id(dict_values)
+                                                logger.info(values)
+                                                #for value in values:
+                                                    #logger.info(value)
+                                                    #cols_id_value = dict_list_prop_id(value)
+                                                    #logger.info(cols_id_value)
+                                                #for col_id_value in cols_id_value:    
+                                                #    message = f"{message}  {col_id_value}: {values[col_id_value]}"    
                                             else:
                                                 logger.info(columna[columna_prop])
                                                 message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
@@ -579,7 +603,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
     response = None
     try:
         response = monday_client.items.delete_item_by_id(
-            item_id= params.item_id
+            iteitem_id= params.item_id
         )
         logger.info(response)
     except Exception as e:
@@ -705,6 +729,7 @@ async def get_item_updates(request: Request) -> OutputModel:
     if not response is None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
+        logger.info(response)
         message = "item updates: "
         items = response['data']['items']
         for item in items:
