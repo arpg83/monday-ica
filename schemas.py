@@ -26,7 +26,7 @@ class CreateItemParams(BaseModel):
     board_id: Optional[str] = None
     group_id: Optional[str] = None
     parent_item_id: Optional[str] = None
-    columns_values: Optional[dict] = None
+    column_values: Optional[dict] = None
 
 #monday-create-update: Creates a comment/update on a Monday.com item
 class CreateUpdateCommentParams(BaseModel):
@@ -37,8 +37,9 @@ class CreateUpdateCommentParams(BaseModel):
 class UpdateItemParams(BaseModel):
     board_id: str
     item_id: str
-    monday_client: str
-    columns_values: List[str]
+    #monday_client: str
+    #column_values: List[str]
+    column_values: dict
 
 #monday-create-doc: Creates a new document in Monday.com 
 class CreateDocParams(BaseModel):

@@ -122,6 +122,7 @@ async def listUsers(request: Request) -> OutputModel:
     )
 
 #monday-get-board-groups: Retrieves all groups from a specified Monday.com board
+'''
 @app.get("/monday/board_groups/get")
 async def getBoardGroups(request: Request) -> OutputModel:
     """
@@ -161,6 +162,7 @@ async def getBoardGroups(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
+'''
 #monday-create-board: Creates a new Monday.com board
 @app.post("/monday/board/create")
 async def create_board(request: Request) -> OutputModel:
@@ -316,41 +318,6 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #        headers=headers
 #    )
 
-#monday-create-board-group: Creates a new group in a Monday.com board    
-@app.post("/monday/board_group/create")
-async def create_board_group(request: Request) -> OutputModel:
-    """
-    Create a new group in a Monday.com board.
-
-    Args:
-        monday_client (MondayClient): The Monday.com client.
-        board_id (str): The ID of the board.
-        group_name (str): The name of the group.
-
-    Returns: 
-
-    """
-    invocation_id = str(uuid4())
-    data = await request.json()
-    params = CreateBoardGroupParams(**data)
-
-    try: 
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-    except requests.RequestException as e:
-        return OutputModel(
-        invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
-    )
-
-    group = monday_client.groups.create_group(board_id=params.board_id, group_name=params.group_name)
-    
-    message = f"Created new group: {params.group_name} in board: {params.board_id}. ID of the group: {group['data']['create_group']['id']}"
-
-    return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-    )
-
 #monday-create-item: Creates a new item or sub-item in a Monday.com board
 @app.post("/monday/item/create")
 async def create_item(request: Request) -> OutputModel:
@@ -386,6 +353,7 @@ async def create_item(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     if params.parent_item_id is None and params.group_id is not None:
     #if "board_id" in data:
         logger.info("Creacion item")
@@ -394,7 +362,7 @@ async def create_item(request: Request) -> OutputModel:
                 board_id=params.board_id,
                 group_id=params.group_id,
                 item_name=params.item_name,
-                column_values=params.columns_values,
+                column_values=params.column_values,
             )
             logger.info(response)
         except Exception as e:
@@ -412,7 +380,7 @@ async def create_item(request: Request) -> OutputModel:
             response = monday_client.items.create_subitem(
                 parent_item_id=params.parent_item_id,
                 subitem_name=params.item_name,
-                column_values=params.columns_values
+                column_values=params.column_values
             )
             logger.info(response)
         except Exception as e:
@@ -556,7 +524,7 @@ async def update_item(request: Request) -> OutputModel:
         response = monday_client.items.change_multiple_column_values(
             board_id=params.board_id, 
             item_id=params.item_id, 
-            column_values=params.columns_values
+            column_values=params.column_values
     )
 
         #Imprimo la respuesta
@@ -902,6 +870,140 @@ async def column_create(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
+#monday-get-board-groups: Retrieves all groups from a specified Monday.com board
+@app.get("/monday/board_groups/get")
+async def getBoardGroups(request: Request) -> OutputModel:
+    """
+    Get the Groups of a Monday.com Board.
+
+    Args: 
+        board_id
+        
+    Returns:
+        List of Groups
+        
+    """
+    invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None 
+    message = "" 
+
+    try:
+        params = GetBoardGroupsParams(**data)
+    except Exception as e:
+        message = f"Error Getting groups of the Monday.com Board: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    response = None
+    message = ""
+    
+    try:
+        #llamada al servicio de monday
+        response = monday_client.groups.get_groups_by_board(board_ids=params.board_id)
+
+        #Imprimo la respuesta
+        logger.info(response)
+
+    except Exception as e:
+        message = f"Error Getting groups of the Monday.com Board: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")        
+       
+        message = f"Available Monday.com Groups: \n %s" % (response['data']) 
+
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        ) 
+
+#monday-create-board-group: Creates a new group in a Monday.com board    
+@app.post("/monday/board_group/create")
+async def create_board_group(request: Request) -> OutputModel:
+    """Create a new group in a Monday.com board.
+
+    Args:
+        boardId: Monday.com Board ID that the group will be created in.
+        groupName: Name of the group to create.
+    """
+    invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None 
+    message = "" 
+
+    try:
+        params = CreateBoardGroupParams(**data)
+    except Exception as e:
+        message = f"Error Creating a group on a Monday.com Board: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    response = None
+    message = ""
+    
+    try:
+        #llamada al servicio de monday
+        response = monday_client.groups.create_group(board_id=params.board_id, group_name=params.group_name)
+
+        #Imprimo la respuesta
+        logger.info(response)
+    except Exception as e:
+        message = f"Error Creating a Monday.com Group: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    message = ""
+    if not response is None:
+        #Genero el mensaje de salida
+        logger.info("Procesa respuesta")  
+        
+        message = f"Created new group: {params.group_name} in board: {params.board_id}. ID of the group: {response['data']['create_group']['id']}"
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        ) 
+     
+
+
+
+
 
 
 #___________________________ Myrian Workspace ______________________________________________________________
@@ -911,6 +1013,14 @@ async def create_doc(request: Request) -> OutputModel:
     '''
     
     '''
+
+
+
+
+
+
+
+
 #___________________________________________________________________________________________________________
 
 #___________________________ Luciano Workspace ______________________________________________________________
