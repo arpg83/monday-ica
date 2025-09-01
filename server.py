@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -43,7 +43,6 @@ app = FastAPI()
 #monday-get-item-updates: Retrieves updates/comments for a specific item
 #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 #monday-get-doc-content: Retrieves the content of a specific document
-#monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
 #monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
 #monday-add-doc-block: Adds a block to an existing document
 #monday-archive-item: Archives a Monday.com item
@@ -121,48 +120,7 @@ async def listUsers(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
-#monday-get-board-groups: Retrieves all groups from a specified Monday.com board
-'''
-@app.get("/monday/board_groups/get")
-async def getBoardGroups(request: Request) -> OutputModel:
-    """
-    Get the Groups of a Monday.com Board.
 
-    Args: 
-        board_id
-        
-    Returns:
-        List of Groups
-        
-    """
-    invocation_id = str(uuid4())
-
-    try: 
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-    except requests.RequestException as e:
-        return OutputModel(
-        invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
-    )
-    
-    data = await request.json()
-    params = GetBoardGroupsParams(**data)
-    response = monday_client.groups.get_groups_by_board(board_ids=params.board_id)
-
-    groups = response["data"]["groups"]
-    group_list = "\n".join(
-        [f"- {group['title']} (ID: {group['id']})" for group in groups]
-    )
-    message = "Available Monday.com Groups: \n %s" % (group_list) 
-
-    #message = f"Available Monday.com Groups: \n %s" % (response['data']) 
-
-    return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-    )
-
-'''
 #monday-create-board: Creates a new Monday.com board
 @app.post("/monday/board/create")
 async def create_board(request: Request) -> OutputModel:
@@ -1000,19 +958,94 @@ async def create_board_group(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         ) 
      
+#monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
+@app.post("/monday/item_in_group/list")
+async def list_items_in_groups(request: Request) -> OutputModel:
+    """
+    List all items in the specified groups of a Monday.com board.
+    """
+    invocation_id = str(uuid4())
 
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Conexión error con Monday Client: {e}")]
+        )
 
+    try:
+        data = await request.json()
+        params = ListItemsInGroupsParams(**data)
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error en parámetros: {e}")]
+        )
 
+    # Construimos la lista de IDs de grupos para GraphQL
+    formatted_group_ids = ", ".join([f'"{gid}"' for gid in params.group_ids])
+
+    # Query GraphQL para traer items por grupo
+    query = f"""
+    query {{
+      boards (ids: {params.board_id}) {{
+        groups (ids: [{formatted_group_ids}]) {{
+          id
+          title
+          items_page (limit: {params.limit}) {{
+            items {{
+              id
+              name
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+
+    try:
+        response = monday_client.custom._query(query)
+        logger.info(response)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error consultando Monday.com: {e}")]
+        )
+
+    # Procesar respuesta
+    items = []
+    try:
+        groups_data = response.get("data", {}).get("boards", [])[0].get("groups", [])
+        for group in groups_data:
+            group_name = group.get("title", "Sin nombre")
+            for item in group.get("items_page", {}).get("items", []):
+                items.append(f"- {item['name']} (ID: {item['id']}) en grupo {group_name}")
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error procesando respuesta: {e}")]
+        )
+
+    if not items:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message="No se encontraron ítems en los grupos especificados.")]
+        )
+
+    message = f"Items en los grupos {params.group_ids} del board {params.board_id}:\\n" + "\\n".join(items)
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 
 
 #___________________________ Myrian Workspace ______________________________________________________________
 #monday-create-doc: Creates a new document in Monday.com
-@app.post("/monday/doc/create")
-async def create_doc(request: Request) -> OutputModel:
-    '''
-    
-    '''
+#@app.post("/monday/doc/create")
+#async def create_doc(request: Request) -> OutputModel:
 
 
 

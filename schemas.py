@@ -56,15 +56,14 @@ class ListBoardsParams(BaseModel):
     page: int
 
 #monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
-class ListItemsInGroups(BaseModel): 
-    #monday_client: str 
-    board_id: str 
-    group_ids: List[str] 
-    limit: int
-    cursor: str
+class ListItemsInGroupsParams(BaseModel):
+    board_id: str
+    group_ids: List[str]
+    limit: Optional[int] = 25
+    cursor: Optional[str] = None    
 
 #monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
-class ListSubitems(BaseModel): 
+class ListSubitemsParams(BaseModel): 
     #workspace_id: int
     item_ids: List[str]
 
