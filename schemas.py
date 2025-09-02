@@ -132,3 +132,7 @@ class CreateColumn(BaseModel):
     column_title:str
     column_type:columnType
     defaults: Optional[object] = None
+
+class OpenExcel(BaseModel):
+    file_name:str
+    download:bool = False

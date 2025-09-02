@@ -14,11 +14,12 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams,OpenExcel
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
+from open_excel_utils import get_pandas
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 template_env = Environment(loader=FileSystemLoader("templates"))
+
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -233,8 +235,9 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                                                 dict_values = columna[columna_prop]
                                                 logger.info(columna_prop)
                                                 logger.info(dict_values)
-                                                values = dict_list_prop_id(dict_values)
-                                                logger.info(values)
+                                                message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
+                                                #values = dict_list_prop_id(dict_values)
+                                                #logger.info(values)
                                                 #for value in values:
                                                     #logger.info(value)
                                                     #cols_id_value = dict_list_prop_id(value)
@@ -1066,6 +1069,33 @@ async def list_items_in_groups(request: Request) -> OutputModel:
     )
 
 
+@app.post("/monday/read_excel")
+async def open_excel(request: Request) -> OutputModel:
+    
+    invocation_id = str(uuid4())
+    
+    data = await request.json()
+    params = None
+    try:
+        #parseo los datos del request
+        logger.info("Parse input")
+        params = OpenExcel(**data)
+    except Exception as e:
+        message = f"Error on create column on Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    #path = "C:/$user/Agentes IA/TestExcel/destino.xlsx"
+    df = get_pandas(params.file_name,params.download)
+    #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
+    #Mensaje de retorno
+    message = ""
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 #___________________________ Myrian Workspace ______________________________________________________________
 #monday-create-doc: Creates a new document in Monday.com
