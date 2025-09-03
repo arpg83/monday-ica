@@ -197,9 +197,13 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     except requests.RequestException as e:
         return OutputModel(
         invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="llamada al servicio Monday Client: {e}")]
+        response=[ResponseMessageModel(message=f"Error al llamar al servicio de Monday Client: {e}")]
     )
     #print(board["data"])
+
+
+    
+
     message = f"Informacion del Board id: {params.board_id}"
     boards = board["data"]["boards"]
     for board in boards:
@@ -216,23 +220,23 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                         dict_items = dict_items_page[prop_item_page]
                         groups = dict_get_array(dict_items)
                         for group in groups:
-                            logger.info("group--")
+                            logger.debug("group--")
                             logger.debug(group)
                             group_props = dict_list_prop_id(group)
                             for group_prop in group_props:
                                 if group_prop == 'column_values':
-                                    logger.info("columnas")
+                                    logger.debug("columnas")
                                     dict_columnas = group[group_prop]
                                     columnas = dict_get_array(dict_columnas)
                                     for columna in columnas:
-                                        logger.info(columna)
+                                        logger.debug(columna)
                                         columna_props = dict_list_prop_id(columna)
                                         for columna_prop in columna_props:
-                                            logger.info(columna_prop)
+                                            logger.debug(columna_prop)
                                             if columna_prop == 'value':
                                                 dict_values = columna[columna_prop]
-                                                logger.info(columna_prop)
-                                                logger.info(dict_values)
+                                                logger.debug(columna_prop)
+                                                logger.debug(dict_values)
                                                 message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
                                                 #values = dict_list_prop_id(dict_values)
                                                 #logger.info(values)
@@ -243,10 +247,10 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                                                 #for col_id_value in cols_id_value:    
                                                 #    message = f"{message}  {col_id_value}: {values[col_id_value]}"    
                                             else:
-                                                logger.info(columna[columna_prop])
+                                                logger.debug(columna[columna_prop])
                                                 message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
                                 elif group_prop == 'group':
-                                    logger.info(group_prop)
+                                    logger.debug(group_prop)
                                     #logger.info(group[group_prop])
                                     desc_props = group[group_prop]
                                     group_desc_props = dict_list_prop_id(desc_props)
