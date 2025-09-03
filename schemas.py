@@ -136,3 +136,7 @@ class CreateColumn(BaseModel):
 class OpenExcel(BaseModel):
     file_name:str
     download:bool = False
+
+#monday-get-board-columns: Get the Columns of a Monday.com Board
+class GetBoardColumnsParams(BaseModel):
+    board_id: str     

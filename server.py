@@ -14,12 +14,14 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId,DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams,OpenExcel, ListSubitemsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
 from open_excel_utils import get_pandas
+
+import json
 
 load_dotenv()
 
@@ -42,7 +44,6 @@ T = TypeVar('T', bound=BaseModel)
 app = FastAPI()
 
 #___________________________ Metodos pendientes ______________________________________________________________
-#monday-get-item-updates: Retrieves updates/comments for a specific item
 #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 #monday-get-doc-content: Retrieves the content of a specific document
 #monday-add-doc-block: Adds a block to an existing document
@@ -120,7 +121,6 @@ async def listUsers(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
     )
-
 
 #monday-create-board: Creates a new Monday.com board
 @app.post("/monday/board/create")
@@ -293,6 +293,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
+#------------------REVISAR-----------------------------------------
 #    message = "Épicas"
 #    content = {"message":message}
 #    headers = {'Content-Disposition': 'inline; filename="out.json"'}
@@ -301,6 +302,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #        content=content,
 #        headers=headers
 #    )
+#-----------------------------------------------------------------
 
 #monday-create-item: Creates a new item or sub-item in a Monday.com board
 @app.post("/monday/item/create")
@@ -717,11 +719,16 @@ async def get_item_updates(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
-
+#monday-get-item-by-id: Retrieves items by theirs IDs
 @app.post("/monday/item/get_item_by_id")
 async def get_item_by_id(request: Request) -> OutputModel:
-    """Retrieves updates/comments for a specific item"""
-    #monday-move-item-to-group
+    """Fetch specific Monday.com items by their IDs"""
+    
+    #------------------REVISAR--------------------------------------
+    #"""Retrieves updates/comments for a specific item"""
+    ##monday-move-item-to-group
+    #----------------------------------------------------------------
+
     #genera id unico
     invocation_id = str(uuid4())
     monday_client = None
@@ -791,6 +798,7 @@ async def get_item_by_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
+#----------------REVISAR-------------------------------------------------
 #El create column lo cree por curiosidad pero me da problemas al establecer el tipo de columna Actualmente no funciona
 #create_column
 @app.post("/monday/columns/create")
@@ -1144,9 +1152,13 @@ async def list_subitems_in_items(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=message)]
     )
 
-
+#monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
+
+    #------------------REVISAR--------------------------------------
+    # Completar comentarios....que hace, que recibe, que devuelve....
+    #---------------------------------------------------------------
     
     invocation_id = str(uuid4())
     
@@ -1173,6 +1185,88 @@ async def open_excel(request: Request) -> OutputModel:
         invocationId=invocation_id,
         response=[ResponseMessageModel(message=message)]
     )
+
+#monday-get-board-columns: Get the Columns of a Monday.com Board
+@app.post("/monday/columns/get")
+async def get_board_columns(request: Request) -> OutputModel:
+    """Get the Columns of a Monday.com Board.
+
+        Args:
+            boardId: Monday.com Board ID that the Item or Sub-item is on.
+    """
+    invocation_id = str(uuid4())
+
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None 
+    message = "" 
+
+    try:
+        params = GetBoardColumnsParams(**data)
+    except Exception as e:
+        message = f"Error Getting Columns of the Monday.com Board: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    response = None
+    message = ""
+           
+    query = f"""
+        query {{
+            boards(ids: {params.board_id}) {{
+                columns {{
+                    id
+                    title
+                    type
+                    settings_str
+                }}
+            }}
+        }}
+    """     
+
+    #Llamada al servicio de Monday
+    response = monday_client.custom._query(query)
+
+    #Imprime la respuesta
+    logger.info(response)
+
+
+    for board in response.get("data", {}).get("boards", []):
+            for column in board["columns"]:
+                settings_str = column.pop("settings_str", None)
+                if settings_str:
+                    if isinstance(settings_str, str):
+                        try:
+                            settings_obj = json.loads(settings_str)
+                            if settings_obj.get("labels"):
+                                column["available_labels"] = settings_obj["labels"]
+                        except json.JSONDecodeError:
+                            pass
+            
+    message = ""
+    if not response is None:
+        #Genera el mensaje de salida
+        logger.info("Procesa respuesta")        
+       
+        message = f"Available Monday.com Columns: \n %s" % (response['data']) 
+
+    else:
+        logger.info("sin respuesta")
+
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        ) 
+
 
 #___________________________ Myrian Workspace ______________________________________________________________
 #monday-create-doc: Creates a new document in Monday.com
