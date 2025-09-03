@@ -198,7 +198,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     except requests.RequestException as e:
         return OutputModel(
         invocationId=invocation_id,        
-        response=[ResponseMessageModel(message="llamada al servicio Monday Client: {e}")]
+        response=[ResponseMessageModel(message=f"Error al llamar al servicio de Monday Client: {e}")]
     )
     #print(board["data"])
 
