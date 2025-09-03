@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -569,7 +569,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
     response = None
     try:
         response = monday_client.items.delete_item_by_id(
-            iteitem_id= params.item_id
+            item_id= params.item_id
         )
         logger.info(response)
     except Exception as e:
@@ -1271,15 +1271,100 @@ async def get_board_columns(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         ) 
 
+#monday-delete-group: Deletes a Monday.com group
+@app.delete("/monday/group/delete")
+async def delete_group_by_id(request: Request) -> OutputModel:
+    """Delete group by id args group_id"""
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = DeleteGroupByIdParams(**data)
+    except Exception as e:
+            message = f"Error deleting Monday.com item: {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+    response = None
+    try:
+        response = monday_client.groups.delete_group(
+            board_id = params.board_id,
+            group_id = params.group_id
+        )
+        logger.info(response)
+    except Exception as e:
+            message = f"Error deleting Monday.com group: {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+    if not response is None:
+        logger.info("Procesa respuesta")
+        message = f"Deleted group {response['data']['delete_group']['id']} Monday.com group"
+    else:
+        logger.info("sin respuesta")
+    
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
 
 #___________________________ Myrian Workspace ______________________________________________________________
+'''
+
 #monday-create-doc: Creates a new document in Monday.com
 #@app.post("/monday/doc/create")
 #async def create_doc(request: Request) -> OutputModel:
+@app.post("/monday/doc/create")
+async def create_doc(request: Request) -> OutputModel:
+    """
+    Create a new Monday.com doc.
+    Args:
+        doc_name (str): The name of the document.
+        workspace_id (str, optional): The workspace where the doc will be created.
+    Returns:
+    """
+    invocation_id = str(uuid4())
+    data = await request.json()
+    params = CreateDocParams(**data)
 
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
+        )
 
+    try:
+        doc = monday_client.create_doc(params.doc_name, params.workspace_id)
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error creating doc: {e}")]
+        )
 
+    message = f"Created monday doc '{params.doc_name}' in workspace {params.workspace_id}. ID: {doc['data']['create_doc']['id']}"
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
+'''
 
 #___________________________________________________________________________________________________________
 

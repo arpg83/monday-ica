@@ -139,4 +139,14 @@ class OpenExcel(BaseModel):
 
 #monday-get-board-columns: Get the Columns of a Monday.com Board
 class GetBoardColumnsParams(BaseModel):
-    board_id: str     
+    board_id: str 
+
+#monday-create-doc: Creates a new document in Monday.com
+class CreateDocParams(BaseModel):
+    doc_name: str
+    workspace_id: str  
+
+#monday-delete-group: Deletes a Monday.com group
+class DeleteGroupByIdParams(BaseModel):
+    board_id:  str
+    group_id: str
