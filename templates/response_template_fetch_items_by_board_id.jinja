@@ -1,0 +1,11 @@
+Group Board created successfully:
+  - Board Id: {{ board_id }}
+  - Group Name: {{ group_name }}
+  
+
+    {% if board_id == "prueba" %}
+        Content if true
+    {% for item in my_list %}
+    - Item: {{ item }}
+    {% endfor %}
+    {% endif %}

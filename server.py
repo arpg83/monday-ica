@@ -21,6 +21,8 @@ from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
 from open_excel_utils import get_pandas
 
+from response_classes import ResponseData,ResponseBoard,ResponseItems
+
 import json
 
 load_dotenv()
@@ -202,12 +204,15 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     )
     #print(board["data"])
 
-
+    obj_boards = ResponseData()
     
 
     message = f"Informacion del Board id: {params.board_id}"
     boards = board["data"]["boards"]
+    
     for board in boards:
+        obj_board = ResponseBoard(board["name"])
+        obj_boards.boards.append(obj_board)
         props_bard = dict_list_prop_id(board)
         logger.debug(props_bard)
         for prop_board in props_bard:
@@ -268,6 +273,24 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
             else:
                 message = f"{message}  {prop_board}: {board[prop_board]}"
 
+    logger.info(obj_boards)
+    pepe = "hola mundo"
+    array =[]
+    array.append("item 1")
+    array.append("item 2")
+    array.append("item 3")
+    array.append("item 4")
+    array.append("item 5")
+    array.append("item 6")
+    array.append("item 7")
+    
+    template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
+    message = template.render(
+        board_id= "prueba"
+        ,group_name = "nada"
+        ,my_list = array
+    )
+    logger.info(message)
 #        logger.info(board)
 #        logger.info(board_name)
 #        message = f"{message}  Board: {board_name}"
@@ -1183,6 +1206,7 @@ async def open_excel(request: Request) -> OutputModel:
     df = get_pandas(params.file_name,params.download)
     #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
     #Mensaje de retorno
+
     message = ""
 
     return OutputModel(
@@ -1311,6 +1335,9 @@ async def delete_group_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
+    
+    
+
     if not response is None:
         logger.info("Procesa respuesta")
         message = f"Deleted group {response['data']['delete_group']['id']} Monday.com group"
