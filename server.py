@@ -200,12 +200,10 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
         invocationId=invocation_id,        
         response=[ResponseMessageModel(message=f"Error al llamar al servicio de Monday Client: {e}")]
     )
-    #print(board["data"])
-
+    
     obj_boards = Board()
     
-
-    message = f"Informacion del Board id: {params.board_id}"
+    #Recolecto informacion de la respuesta para enviar al template de jinja
     boards = board["data"]["boards"]
     
     for board in boards:
@@ -281,66 +279,14 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                                                 logger.debug(columna_prop)
                                                 logger.debug(dict_values)
                                                 obj_col.value = str(dict_values)
-                                                message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
-                                                #values = dict_list_prop_id(dict_values)
-                                                #logger.info(values)
-                                                #for value in values:
-                                                    #logger.info(value)
-                                                    #cols_id_value = dict_list_prop_id(value)
-                                                    #logger.info(cols_id_value)
-                                                #for col_id_value in cols_id_value:    
-                                                #    message = f"{message}  {col_id_value}: {values[col_id_value]}"    
-                                            else:
-                                                logger.debug(columna[columna_prop])
-                                                message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
-                                elif group_prop == 'group':
-                                    logger.debug(group_prop)
-                                    #logger.info(group[group_prop])
-                                    desc_props = group[group_prop]
-                                    group_desc_props = dict_list_prop_id(desc_props)
-                                    for group_desc_prop in group_desc_props:
-                                        message = f"{message}  {group_desc_prop}: {desc_props[group_desc_prop]}"
-                                else:
-                                    logger.debug(group_prop)
-                                    logger.debug(group[group_prop])
-                                    message = f"{message}  {group_prop}: {group[group_prop]}"
 
-                    else:
-                        message = f"{message}  {prop_item_page}: {dict_items_page[prop_item_page]}"
-
-            else:
-                message = f"{message}  {prop_board}: {board[prop_board]}"
-
-    
+    #Aplico template de jinja
     template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
     message = template.render(
         obj_boards= obj_boards
     )
     logger.info(message)
 
-#        logger.info(board)
-#        logger.info(board_name)
-#        message = f"{message}  Board: {board_name}"
-#        items_page = board["items_page"]
-#        if "cursor" in items_page:
-#            cursor = items_page["cursor"]
-#            message = f"{message}  Cursor: {cursor}"
-#            items = items_page["items"]
-#            for item in items:
-#                group = item["group"]
-#                column_values = item["column_values"]
-#                id = item["id"]
-#                name = item["name"]
-#                logger.info(name)
-#                message = f"{message}  item name: {name}"
-#                message = f"{message}  id: {id}"
-#                if "column_values" in item:
-#                    column_values = item["column_values"]
-#                    for column in column_values:
-#                        col_id = column["id"]
-#                        text = column["text"]
-#                        message = f"{message}  Column id: {col_id}"
-#                        message = f"{message}  Column text: {text}"
 
     return OutputModel(
             invocationId=invocation_id,
