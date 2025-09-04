@@ -273,24 +273,15 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
             else:
                 message = f"{message}  {prop_board}: {board[prop_board]}"
 
-    logger.info(obj_boards)
-    pepe = "hola mundo"
-    array =[]
-    array.append("item 1")
-    array.append("item 2")
-    array.append("item 3")
-    array.append("item 4")
-    array.append("item 5")
-    array.append("item 6")
-    array.append("item 7")
     
-    template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
-    message = template.render(
-        board_id= "prueba"
-        ,group_name = "nada"
-        ,my_list = array
-    )
-    logger.info(message)
+#    template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
+#    message = template.render(
+#        board_id= "prueba"
+#        ,group_name = "nada"
+#        ,my_list = array
+#    )
+#    logger.info(message)
+
 #        logger.info(board)
 #        logger.info(board_name)
 #        message = f"{message}  Board: {board_name}"
@@ -602,11 +593,13 @@ async def delete_item_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
-    if not response is None:
-        logger.info("Procesa respuesta")
-        message = f"Deleted item {response['data']['delete_item']['id']} Monday.com item"
-    else:
-        logger.info("sin respuesta")
+    if not response == None:
+        deleted_item = response['data']['delete_item']['id']
+
+        template = template_env.get_template("response_template_item_delete.jinja")
+        message = template.render(
+            deleted_item = deleted_item
+        )
     
     return OutputModel(
             invocationId=invocation_id,
@@ -1336,7 +1329,7 @@ async def delete_group_by_id(request: Request) -> OutputModel:
                     response=[ResponseMessageModel(message=message)]
             )
     
-    
+
 
     if not response is None:
         logger.info("Procesa respuesta")
