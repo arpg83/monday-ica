@@ -21,7 +21,7 @@ from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
 from open_excel_utils import get_pandas
 
-from response_classes import ResponseData,ResponseBoard,ResponseItems
+from response_classes import *
 
 import json
 
@@ -202,15 +202,15 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     )
     #print(board["data"])
 
-    obj_boards = ResponseData()
+    obj_boards = Board()
     
 
     message = f"Informacion del Board id: {params.board_id}"
     boards = board["data"]["boards"]
     
     for board in boards:
-        obj_board = ResponseBoard(board["name"])
-        obj_boards.boards.append(obj_board)
+        obj_boards.name = board["name"]
+        print(obj_boards.name)
         props_bard = dict_list_prop_id(board)
         logger.debug(props_bard)
         for prop_board in props_bard:
@@ -224,23 +224,63 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                         dict_items = dict_items_page[prop_item_page]
                         groups = dict_get_array(dict_items)
                         for group in groups:
+                            obj_item = Item()                            
                             logger.debug("group--")
                             logger.debug(group)
                             group_props = dict_list_prop_id(group)
+                            logger.debug(group_props)
                             for group_prop in group_props:
+                                if group_prop == 'id':
+                                    logger.info('id')
+                                    value = group[group_prop]
+                                    obj_item.id = value
+                                    logger.info(value)
+                                if group_prop == 'name':
+                                    logger.info('id')
+                                    value = group[group_prop]
+                                    obj_item.name = value
+                                    logger.info(value)
+                                if group_prop == 'group':
+                                    value = group[group_prop]
+                                    logger.info(group_prop)
+                                    logger.info(value)
+                                    #Agrego al array de grupos el grupo
+                                    current_group = obj_boards.find_group_by_str(str(value),True)
+                                    #Agrego item al grupo
+                                    current_group.items.append(obj_item)
                                 if group_prop == 'column_values':
                                     logger.debug("columnas")
                                     dict_columnas = group[group_prop]
+                                    logger.debug(dict_columnas)
                                     columnas = dict_get_array(dict_columnas)
                                     for columna in columnas:
+                                        obj_col = Column()
+                                        obj_item.columns.append(obj_col)
                                         logger.debug(columna)
                                         columna_props = dict_list_prop_id(columna)
                                         for columna_prop in columna_props:
                                             logger.debug(columna_prop)
+                                            if columna_prop == 'id':
+                                                value = columna[columna_prop]
+                                                logger.info(value)
+                                                obj_col.id = value
+                                            if columna_prop == 'text':
+                                                value = columna[columna_prop]
+                                                logger.info(value)
+                                                obj_col.text = value
+                                            if columna_prop == 'type':
+                                                value = columna[columna_prop]
+                                                logger.info(value)
+                                                obj_col.type = value
+                                            if columna_prop == 'status':
+                                                value = columna[columna_prop]
+                                                logger.info(value)
+                                                obj_col.status = value
                                             if columna_prop == 'value':
                                                 dict_values = columna[columna_prop]
                                                 logger.debug(columna_prop)
                                                 logger.debug(dict_values)
+                                                obj_col.value = str(dict_values)
                                                 message = f"{message}  {columna_prop}: {columna[columna_prop]}"    
                                                 #values = dict_list_prop_id(dict_values)
                                                 #logger.info(values)
@@ -272,13 +312,11 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
                 message = f"{message}  {prop_board}: {board[prop_board]}"
 
     
-#    template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
-#    message = template.render(
-#        board_id= "prueba"
-#        ,group_name = "nada"
-#        ,my_list = array
-#    )
-#    logger.info(message)
+    template = template_env.get_template("response_template_fetch_items_by_board_id.jinja")
+    message = template.render(
+        obj_boards= obj_boards
+    )
+    logger.info(message)
 
 #        logger.info(board)
 #        logger.info(board_name)

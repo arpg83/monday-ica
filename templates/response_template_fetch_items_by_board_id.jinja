@@ -1,11 +1,16 @@
-Group Board created successfully:
-  - Board Id: {{ board_id }}
-  - Group Name: {{ group_name }}
-  
-
-    {% if board_id == "prueba" %}
-        Content if true
-    {% for item in my_list %}
-    - Item: {{ item }}
-    {% endfor %}
-    {% endif %}
+Board name: {{ obj_boards.name }}
+{% for group in obj_boards.groups %}
+  Group id: {{ group.id }}
+  Title: {{ group.title }}
+  {% for item in group.items %}
+    Item id: {{ item.id }}
+    Item name: {{ item.name }}
+      {% for col in item.columns %}
+          Column id: {{ col.id }}
+          Column text: {{ col.text }}
+          Column type: {{ col.type }}
+          Column status: {{ col.status }}
+          Column value: {{ col.value }}
+      {% endfor %}
+  {% endfor %}
+{% endfor %}
