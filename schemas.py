@@ -143,10 +143,22 @@ class GetBoardColumnsParams(BaseModel):
 
 #monday-create-doc: Creates a new document in Monday.com
 class CreateDocParams(BaseModel):
-    doc_name: str
-    workspace_id: str  
+    title: str
+    workspace_id: Optional[int] = None
+    board_id: Optional[int] = None
+    kind: Optional[str] = None
+    column_id: Optional[str] = None
+    item_id: Optional[int] = None 
 
 #monday-delete-group: Deletes a Monday.com group
 class DeleteGroupByIdParams(BaseModel):
     board_id:  str
     group_id: str
+
+#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
+class GetDocsParams(BaseModel): 
+    limit: int = 20
+
+#monday-get-doc-content: Retrieves the content of a specific document
+class GetDocsContentParams(BaseModel):
+    doc_id: str    
