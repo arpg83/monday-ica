@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, GetDocsParams, GetDocsContentParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocsContentParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -1589,6 +1589,56 @@ async def get_doc_content(request: Request) -> OutputModel:
         message = f"Documents:\n\n" + "\n".join(lines)
 
         return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
+#monday-archive-item: Archives a Monday.com item
+@app.post("/monday/archive/item")
+async def archive_item_by_id(request: Request) -> OutputModel:
+    """Archive item by id args item_id"""
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = ArchiveItemParams(**data)
+    except Exception as e:
+            message = f"Error archiving item Monday.com : {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+    response = None
+    try:
+        response = monday_client.items.archive_item_by_id(
+            item_id= params.item_id
+        )
+        logger.info(response)
+    except Exception as e:
+            message = f"Error archiving item Monday.com : {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+    if not response is None:
+        logger.info("Procesa respuesta")
+        message = f"Archive item {response['data']['archive_item']['id']} Monday.com item"
+    else:
+        logger.info("sin respuesta")
+    
+    return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
