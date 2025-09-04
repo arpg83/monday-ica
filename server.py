@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, GetDocsParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroupId,CreateColumn,GetItemComentsParams,GetItemById, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, GetDocsParams, GetDocsContentParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -44,7 +44,6 @@ T = TypeVar('T', bound=BaseModel)
 app = FastAPI()
 
 #___________________________ Metodos pendientes ______________________________________________________________
-#monday-get-doc-content: Retrieves the content of a specific document
 #monday-add-doc-block: Adds a block to an existing document
 #monday-archive-item: Archives a Monday.com item
 #______________________________________________________________________________________________________________
@@ -1324,7 +1323,7 @@ async def delete_group_by_id(request: Request) -> OutputModel:
 
 #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 @app.post("/monday/docs/list")
-async def Get_docs(request: Request) -> OutputModel:
+async def get_docs(request: Request) -> OutputModel:
         """
         Get a list of documents.
 
@@ -1423,12 +1422,125 @@ async def Get_docs(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
+#monday-get-doc-content: Retrieves the content of a specific document
+@app.post("/monday/doc_content/get")
+async def get_doc_content(request: Request) -> OutputModel:
+        """
+        Get the content blocks of a document.
+
+        Args:
+            doc_id (str): Document ID
+
+        Returns:
+            str: Document content listing
+        """
+        invocation_id = str(uuid4())
+        logger.info(invocation_id)
+
+        try:
+            monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+        except requests.RequestException as e:
+            return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
+        )
+                
+        params = None
+
+        try:
+            data = await request.json()
+            params = GetDocsContentParams(**data)
+            logger.info(params)
+        except Exception as e:
+            message = f"Error getting Monday.com doc_content: {e}"
+            logger.info("Error with params")
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+        
+        response = None
+
+         # Query GraphQL para traer los docs        
+        query = f"""
+        query {{
+            docs (ids: {params.doc_id}) {{
+                id
+                name
+                blocks {{
+                    id
+                    type
+                    content
+                }}
+            }}
+        }}
+        """
+        try:
+            response = monday_client.custom._query(query)
+            logger.info(response)
+        except requests.RequestException as e:
+           logger.info("sin respuesta")
+           return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=f"Error consulting doc_content in Monday.com: {e}")]               
+            )
+
+        try:
+            docs = (response or {}).get("data", {}).get("docs", [])
+            logger.info(docs)
+        except Exception as e:
+            logger.info("error en el try de docs")
+            return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error processing response: {e}")]            
+        )
+    
+        if not docs:
+
+            message = f"Document with ID {params.doc_id} not found."
+            return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+            )
+        
+        doc = docs[0]
+        
+        try:
+            blocks = doc.get("blocks", [])
+            logger.info(blocks)
+        except Exception as e:
+            logger.info("error en el try de blocks")
+            return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error processing response: {e}")]            
+        )       
+           
+        if not blocks:
+            message = f"Document {doc['name']} (ID: {doc['id']}) has no content blocks."            
+            return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+            )
+
+         # Procesar respuesta 
+        lines = [f"Document {doc['name']} (ID: {doc['id']}):\n\nBlocks:"]
+        for b in blocks:
+            lines.append(f"- Block ID: {b['id']} | Type: {b['type']} | Content: {b['content']}")
+
+        message = f"Documents:\n\n" + "\n".join(lines)
+
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
 #___________________________ Myrian Workspace ______________________________________________________________
 
 ''' CREATE DOC-----------------------------------------------
 #monday-create-doc: Creates a new document in Monday.com
 @app.post("/monday/doc/create")
-async def create_doc(request: Request) -> OutputModel:
+async def Create_doc(request: Request) -> OutputModel:
     """
         Create a new document.
 

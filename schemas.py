@@ -158,3 +158,7 @@ class DeleteGroupByIdParams(BaseModel):
 #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 class GetDocsParams(BaseModel): 
     limit: int = 20
+
+#monday-get-doc-content: Retrieves the content of a specific document
+class GetDocsContentParams(BaseModel):
+    doc_id: str    
