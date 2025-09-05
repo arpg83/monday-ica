@@ -59,9 +59,11 @@ def process_excel_monday(filename, download , monday_client:MondayClient,simulac
     item_id_l3 = None
     item_id_l4 = None
     
-    for i in range(3):
+    for i in range(30):
         title = read_cell(df,"Name",i)
         outline_lvl = read_cell(df,"Outline Level",i)
+        message = f"Row: {i}"
+        logger.info(message)
         logger.info(title)
         logger.info(outline_lvl)
         logger.info(identify_type(outline_lvl))
@@ -74,9 +76,9 @@ def process_excel_monday(filename, download , monday_client:MondayClient,simulac
         if identify_type(outline_lvl) == 'subiteml1':
             item_id_l2 = xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
         if identify_type(outline_lvl) == 'subiteml2':
-            item_id_l3 = xls_create_sub_item(monday_client,title,item_id_l2,simulacion)
+            item_id_l3 = xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
         if identify_type(outline_lvl) == 'subiteml3':
-            item_id_l4 = xls_create_sub_item(monday_client,title,item_id_l3,simulacion)
+            item_id_l4 = xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
 
 
 def xls_create_board(monday_client:MondayClient,board_name,board_kind,simulacion:bool):
@@ -125,7 +127,9 @@ def xls_create_item(monday_client:MondayClient,item_name,board_id,group_id,simul
             ,board_id=board_id
             ,group_id=group_id
         )
-        return  respuesta['data']['create_item']['id']
+        item_id = respuesta['data']['create_item']['id']
+        logger.info(item_id)
+        return item_id
 
 def xls_create_sub_item(monday_client:MondayClient,item_name,item_id,simulacion:bool):
     text = f"Create sub item: {item_name} {item_id}"
@@ -136,7 +140,7 @@ def xls_create_sub_item(monday_client:MondayClient,item_name,item_id,simulacion:
         return item_id
     else:
         respuesta = monday_client.items.create_subitem(
-            item_name= item_name
-            ,item_id = item_id
+            subitem_name = item_name
+            ,parent_item_id = item_id
         )
         return  respuesta['data']['create_subitem']['id']
