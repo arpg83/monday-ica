@@ -1178,8 +1178,15 @@ async def open_excel(request: Request) -> OutputModel:
                 status="error",
                 response=[ResponseMessageModel(message=message)]
         )
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+        process_excel_monday(params.file_name,params.download,monday_client)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Conexión error con Monday Client: {e}")]
+        )
     #path = "C:/$user/Agentes IA/TestExcel/destino.xlsx"
-    process_excel_monday(params.file_name,params.download)
     #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
     #Mensaje de retorno
 
