@@ -1,6 +1,7 @@
 import pandas as pd
 import logging
 from monday import MondayClient
+from monday.resources.types import BoardKind
 
 logger = logging.getLogger(__name__)
 
@@ -47,25 +48,27 @@ def identify_type(outline_lvl):
         return 'subiteml4'
     return 'undefined'
 
-def process_excel_monday(filename, download , monday_client):
+def process_excel_monday(filename, download , monday_client:MondayClient):
     df = get_pandas(filename,download)
     logger.info(list_columns(df))
-    for i in range(30):
+
+    board_id = None
+    group_id = None
+    item_id_l1 = None
+    item_id_l2 = None
+    item_id_l3 = None
+    item_id_l4 = None
+    
+    for i in range(3):
         title = read_cell(df,"Name",i)
         outline_lvl = read_cell(df,"Outline Level",i)
         logger.info(title)
         logger.info(outline_lvl)
         logger.info(identify_type(outline_lvl))
-        board_id = None
-        group_id = None
-        item_id_l1 = None
-        item_id_l2 = None
-        item_id_l3 = None
-        item_id_l4 = None
         if identify_type(outline_lvl) == 'board':
-            board_id = xls_create_board(monday_client,title,'public')
+            board_id = xls_create_board(monday_client,title,'public',True)
         if identify_type(outline_lvl) == 'group':
-            group_id = xls_create_group(monday_client,title,board_id)
+            group_id = xls_create_group(monday_client,title,board_id,True)
         if identify_type(outline_lvl) == 'item':
             item_id_l1 = xls_create_item(monday_client,title,board_id,group_id)
         if identify_type(outline_lvl) == 'subiteml1':
@@ -75,23 +78,45 @@ def process_excel_monday(filename, download , monday_client):
         if identify_type(outline_lvl) == 'subiteml3':
             item_id_l4 = xls_create_sub_item(monday_client,title,item_id_l3)
 
-def xls_create_group(monday_client,group_name,board_id):
-    text = f"Create group: {group_name} {board_id}"
-    logger.info(text)
-    
-    group_id = 0
-    return group_id
 
-def xls_create_board(monday_client,board_name,board_kind):
+def xls_create_board(monday_client:MondayClient,board_name,board_kind,simulacion:bool):
     text = f"Create board: {board_name} {board_kind}"
     logger.info(text)
 
-    board_id = 0
-    return board_id
+    if simulacion:
+        board_id = 9986350370
+        return board_id
+    else:
+        actual_board_kind = BoardKind(board_kind)
+        respuesta = monday_client.boards.create_board(
+            board_name= board_name
+            ,board_kind= actual_board_kind
+            )
+        logger.info(respuesta)
+        return  respuesta['data']['create_board']['id']
+        
+
+def xls_create_group(monday_client:MondayClient,group_name,board_id,simulacion:bool):
+    text = f"Create group: {group_name} {board_id}"
+    logger.info(text)
+    
+    if simulacion:
+        group_id = 'group_mkvg7rfr'
+        return group_id
+    else:
+        respuesta = monday_client.groups.create_group(
+            group_name=group_name,
+            board_id=board_id
+        )
+        logger.info(respuesta)
+        return  respuesta['data']['create_group']['id']
+
 
 def xls_create_item(monday_client,item_name,board_id,group_id):
     text = f"Create Item: {item_name} {board_id} {group_id}"
     logger.info(text)
+
+    
 
     item_id = 0
     return item_id
