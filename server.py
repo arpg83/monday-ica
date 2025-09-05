@@ -1180,7 +1180,7 @@ async def open_excel(request: Request) -> OutputModel:
         )
     try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        process_excel_monday(params.file_name,params.download,monday_client)
+        process_excel_monday(params.file_name,params.download,monday_client,True)
     except requests.RequestException as e:
         return OutputModel(
             invocationId=invocation_id,
