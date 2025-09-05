@@ -19,7 +19,7 @@ from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, Create
 from monday import MondayClient
 from monday.resources.types import BoardKind
 from fastapi.responses import JSONResponse
-from open_excel_utils import get_pandas
+from open_excel_utils import *
 
 from response_classes import *
 
@@ -1179,7 +1179,7 @@ async def open_excel(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     #path = "C:/$user/Agentes IA/TestExcel/destino.xlsx"
-    df = get_pandas(params.file_name,params.download)
+    process_excel_monday(params.file_name,params.download)
     #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
     #Mensaje de retorno
 
