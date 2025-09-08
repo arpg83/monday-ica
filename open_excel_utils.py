@@ -95,7 +95,8 @@ def xls_create_board(monday_client:MondayClient,board_name,board_kind,simulacion
             ,board_kind= actual_board_kind
             )
         logger.info(respuesta)
-        return  respuesta['data']['create_board']['id']
+        board_id = respuesta['data']['create_board']['id'] 
+        return  board_id
         
 
 def xls_create_group(monday_client:MondayClient,group_name,board_id,simulacion:bool):
@@ -111,7 +112,16 @@ def xls_create_group(monday_client:MondayClient,group_name,board_id,simulacion:b
             board_id=board_id
         )
         logger.info(respuesta)
-        return  respuesta['data']['create_group']['id']
+
+        group_id = respuesta['data']['create_group']['id']
+
+        respuesta2 = monday_client.groups.delete_group(
+            board_id=board_id
+            ,group_id='topics'
+        )
+        logger.info(respuesta2)
+
+        return  group_id
 
 
 def xls_create_item(monday_client:MondayClient,item_name,board_id,group_id,simulacion:bool):
