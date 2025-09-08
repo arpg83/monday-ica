@@ -1745,8 +1745,6 @@ async def open_excel(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Conexión error con Monday Client: {e}")]
         )
-    #path = "C:/$user/Agentes IA/TestExcel/destino.xlsx"
-    #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
     #Mensaje de retorno
 
     message = ""
