@@ -1757,37 +1757,6 @@ async def open_excel(request: Request) -> OutputModel:
     )
 
 
-    #------------------REVISAR--------------------------------------
-    # Completar comentarios....que hace, que recibe, que devuelve....
-    #---------------------------------------------------------------
-    
-    invocation_id = str(uuid4())
-    
-    data = await request.json()
-    params = None
-    try:
-        #parseo los datos del request
-        logger.info("Parse input")
-        params = OpenExcel(**data)
-    except Exception as e:
-        message = f"Error on create column on Monday.com: {e}"
-        return OutputModel(
-                invocationId=invocation_id,
-                status="error",
-                response=[ResponseMessageModel(message=message)]
-        )
-    #path = "C:/$user/Agentes IA/TestExcel/destino.xlsx"
-    df = get_pandas(params.file_name,params.download)
-    #desde aca se encontraria el codigo para procesar los datos del pandas dataframe
-    #Mensaje de retorno
-
-    message = ""
-
-    return OutputModel(
-        invocationId=invocation_id,
-        response=[ResponseMessageModel(message=message)]
-    )
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000, log_level="info")
