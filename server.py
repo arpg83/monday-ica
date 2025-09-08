@@ -1717,9 +1717,10 @@ async def column_create(request: Request) -> OutputModel:
 #monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
-
+    """Abre un archivo excel y procesa los datos creando boards grupos e items"""
     #------------------REVISAR--------------------------------------
-    # Completar comentarios....que hace, que recibe, que devuelve....
+    # Abre un archivo excel y procesa los datos creando boards grupos e items
+    #Pendiente la generacion del mensaje de respuesta
     #---------------------------------------------------------------
     
     invocation_id = str(uuid4())
