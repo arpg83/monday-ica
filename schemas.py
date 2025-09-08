@@ -10,17 +10,21 @@ class OutputModel(BaseModel):
     invocationId: str
     response: List[ResponseMessageModel]
 
-#monday-create-board: Creates a new Monday.com board
+#-----------------------------------------------------------------------------------------------------------------
+#-----------------------CREATE------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------    
+
+# 1 - monday-create-board: Creates a new Monday.com board
 class CreateBoardParams(BaseModel):
     board_name: str
     board_kind: str
 
-#monday-create-board-group: Creates a new group in a Monday.com board
+# 2 - monday-create-board-group: Creates a new group in a Monday.com board
 class CreateBoardGroupParams(BaseModel):
     board_id: str
     group_name: str
 
-#monday-create-item: Creates a new item or sub-item in a Monday.com board
+# 3 - monday-create-item: Creates a new item or sub-item in a Monday.com board
 class CreateItemParams(BaseModel):
     item_name: str
     board_id: Optional[str] = None
@@ -28,104 +32,127 @@ class CreateItemParams(BaseModel):
     parent_item_id: Optional[str] = None
     column_values: Optional[dict] = None
 
-#monday-create-update: Creates a comment/update on a Monday.com item
+# 4 - monday-create-update: Creates a comment/update on a Monday.com item
 class CreateUpdateCommentParams(BaseModel):
     item_id: str
     update_text: str
 
-#monday-update-item: Update a Monday.com item's or sub-item's column values.   
-class UpdateItemParams(BaseModel):
-    board_id: str
-    item_id: str
-    #monday_client: str
-    #column_values: List[str]
-    column_values: dict
-
-#monday-create-doc: Creates a new document in Monday.com 
+# 5 - monday-create-doc: Creates a new document in Monday.com 
 class CreateDocParams(BaseModel):
     title: str
-    workspace_id: int
-    kind: str
-    board_id: str
-    column_id: str
-    item_id: int    
+    workspace_id: Optional[int] = None
+    board_id: Optional[int] = None
+    kind: Optional[str] = None
+    column_id: Optional[str] = None
+    item_id: Optional[int] = None 
 
-#monday-list-boards: Lists all available Monday.com boards
+#-----------------------------------------------------------------------------------------------------------------  
+#-----------------------LIST--------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------- 
+
+# 6 - monday-list-boards: Lists all available Monday.com boards
 class ListBoardsParams(BaseModel):
     limit: int
     page: int
 
-#monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
+# 7 - monday-get-board-groups: Retrieves all groups from a specified Monday.com board 
+class GetBoardGroupsParams(BaseModel):
+    board_id: str     
+
+# 8 - monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
 class ListItemsInGroupsParams(BaseModel):
     board_id: str
     group_ids: List[str]
     limit: Optional[int] = 25
     cursor: Optional[str] = None    
 
-#monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
+# 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
 class ListSubitemsParams(BaseModel): 
     #workspace_id: int
     item_ids: List[str]
 
-#monday-get-board-groups: Retrieves all groups from a specified Monday.com board 
-class GetBoardGroupsParams(BaseModel):
-    board_id: str 
-
-#monday-get-item-updates: Retrieves updates/comments for a specific item
+# 10 - monday-get-item-updates: Retrieves updates/comments for a specific item
 class GetItemUpdatesParams(BaseModel):
     item_id: str 
     limit: int    
 
-#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
+# 11 - monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
 class GetDocsParams(BaseModel):
-    limit: int  
+    limit: int = 20  
 
-#monday-get-doc-content: Retrieves the content of a specific document
+# 12 - monday-get-doc-content: Retrieves the content of a specific document
 class GetDocContentParams(BaseModel):
-    doc_id: str          
+    doc_id: str
 
-class GetGroupByNumberParams(BaseModel):
-    group_number: str 
 
+#----------------------------------------------------------------------------------------------------------------- 
+#-----------------------GET---------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------- 
+
+# 13 - monday-list-users: Lists all available Monday.com users
+
+# 14 - monday-get-item-by-id: Retrieves items by theirs IDs
 class GetItemByIdParams(BaseModel):
+    item_id: str 
+
+# 15 - monday-get-board-columns: Get the Columns of a Monday.com Board
+class GetBoardColumnsParams(BaseModel):
+    board_id: str 
+
+
+
+#----------------------------------------------------------------------------------------------------------------- 
+#-----------------------UPDATE------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------- 
+
+# 16 - monday-update-item: Update a Monday.com item's or sub-item's column values.   
+class UpdateItemParams(BaseModel):
+    board_id: str
+    item_id: str
+    #monday_client: str
+    #column_values: List[str]
+    column_values: dict     
+
+# 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
+class MoveItemToGroup(BaseModel):
+    item_id:str
+    group_id:str
+
+# 18 - monday-archive-item: Archives a Monday.com item
+class ArchiveItemParams(BaseModel):
     item_id: str   
 
-#monday-add-doc-block: Adds a block to an existing document
+# 19 - monday-add-doc-block: Adds a block to an existing document
 class AddDocBlockParams(BaseModel):                 
     doc_id: str
     block_type: str
     content: str
-    after_block_id: str 
+    after_block_id: str   
 
-#monday-move-item-to-group: Moves a Monday.com item to a different group
-class MoveItemToGroupId(BaseModel):
+
+#----------------------------------------------------------------------------------------------------------------- 
+#-----------------------DELETE------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------- 
+
+# 20 - monday-delete-group: Deletes a Monday.com group
+class DeleteGroupByIdParams(BaseModel):
+    board_id:  str
+    group_id: str
+
+# 21 - monday-delete-item: Deletes a Monday.com item
+class DeleteItemByIdParams(BaseModel):
     item_id:str
-    group_id:str
 
-#monday-archive-item: Archives a Monday.com item
-class ArchiveItemParams(BaseModel):
-    item_id: str         
+#----------------------------------------------------------------------------------------------------------------- 
+#-----------------------OTHERS------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------- 
+
 
 class FetchItemsByBoardId(BaseModel):
     board_id:str
 
-#monday-delete-item: Deletes a Monday.com item
-class DeleteItemByIdParams(BaseModel):
-    item_id:str
-
-class MoveItemToGroupId(BaseModel):
-    item_id:str
-    group_id:str
-
-class GetItemComentsParams(BaseModel):
-    item_id:str
-    limit:int
-
-class GetItemById(BaseModel):
-    items_id:str
-
 class columnType(BaseModel):
-    value:str
+    value:str 
 
 class CreateColumn(BaseModel):
     board_id:str
@@ -135,30 +162,8 @@ class CreateColumn(BaseModel):
 
 class OpenExcel(BaseModel):
     file_name:str
-    download:bool = False
+    download:bool = False 
 
-#monday-get-board-columns: Get the Columns of a Monday.com Board
-class GetBoardColumnsParams(BaseModel):
-    board_id: str 
-
-#monday-create-doc: Creates a new document in Monday.com
-class CreateDocParams(BaseModel):
-    title: str
-    workspace_id: Optional[int] = None
-    board_id: Optional[int] = None
-    kind: Optional[str] = None
-    column_id: Optional[str] = None
-    item_id: Optional[int] = None 
-
-#monday-delete-group: Deletes a Monday.com group
-class DeleteGroupByIdParams(BaseModel):
-    board_id:  str
-    group_id: str
-
-#monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
-class GetDocsParams(BaseModel): 
-    limit: int = 20
-
-#monday-get-doc-content: Retrieves the content of a specific document
-class GetDocsContentParams(BaseModel):
-    doc_id: str    
+ 
+    
+   
