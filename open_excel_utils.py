@@ -13,6 +13,15 @@ class ExcelUtilsMonday:
     uid = ""
     dwnload:bool = False
     eliminado_grupo_inicial = False
+    board_id = None
+    group_id = None
+    item_id_l1 = None
+    item_id_l2 = None
+    item_id_l3 = None
+    item_id_l4 = None
+    pos = 0
+    wait_time = 1
+    esperar = True
 
     def __init__(self):
         self.download = False
@@ -101,15 +110,10 @@ class ExcelUtilsMonday:
         logger.info(self.list_columns(df))
         logger.info(uid)
 
-        board_id = None
-        group_id = None
-        item_id_l1 = None
-        item_id_l2 = None
-        item_id_l3 = None
-        item_id_l4 = None
         if rows == 0:
             rows = len(df.index)
         for i in range(rows):
+            self.pos = i
             title = self.read_cell(df,"Name",i)
             outline_lvl = self.read_cell(df,"Outline Level",i)
             message = f"Row: {i}"
@@ -118,18 +122,19 @@ class ExcelUtilsMonday:
             logger.info(outline_lvl)
             logger.info(self.identify_type(outline_lvl))
             if self.identify_type(outline_lvl) == 'board':
-                board_id = self.xls_create_board(monday_client,title,'public',simulacion)
+                self.board_id = self.xls_create_board(monday_client,title,'public',simulacion)
             if self.identify_type(outline_lvl) == 'group':
-                group_id = self.xls_create_group(monday_client,title,board_id,simulacion)
+                self.group_id = self.xls_create_group(monday_client,title,self.board_id,simulacion)
             if self.identify_type(outline_lvl) == 'item':
-                item_id_l1 = self.xls_create_item(monday_client,title,board_id,group_id,simulacion)
+                self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,simulacion)
             if self.identify_type(outline_lvl) == 'subiteml1':
-                item_id_l2 = self.xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
+                self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
             if self.identify_type(outline_lvl) == 'subiteml2':
-                item_id_l3 = self.xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
+                self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
             if self.identify_type(outline_lvl) == 'subiteml3':
-                item_id_l4 = self.xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
-            time.sleep(3)  # Pauses execution for 3 seconds.
+                self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
+            if self.esperar:
+                time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
         self.clean_files()
 
     def limpiar_nombre(self,texto:str):
