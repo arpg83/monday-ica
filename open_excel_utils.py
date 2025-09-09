@@ -146,7 +146,7 @@ class ExcelUtilsMonday:
         else:
             actual_board_kind = BoardKind(board_kind)
             respuesta = monday_client.boards.create_board(
-                board_name= board_name
+                board_name= self.limpiar_nombre(board_name)
                 ,board_kind= actual_board_kind
                 )
             logger.info(respuesta)
@@ -163,7 +163,7 @@ class ExcelUtilsMonday:
             return group_id
         else:
             respuesta = monday_client.groups.create_group(
-                group_name=group_name,
+                group_name= self.limpiar_nombre(group_name),
                 board_id=board_id
             )
             logger.info(respuesta)
@@ -190,7 +190,7 @@ class ExcelUtilsMonday:
             return item_id
         else:
             respuesta = monday_client.items.create_item(
-                item_name= item_name
+                item_name= self.limpiar_nombre(item_name)
                 ,board_id=board_id
                 ,group_id=group_id
             )
@@ -208,7 +208,7 @@ class ExcelUtilsMonday:
             return item_id
         else:
             respuesta = monday_client.items.create_subitem(
-                subitem_name = item_name
+                subitem_name = self.limpiar_nombre(item_name)
                 ,parent_item_id = item_id
             )
             logger.info(respuesta)
