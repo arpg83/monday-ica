@@ -1732,7 +1732,7 @@ async def open_excel(request: Request) -> OutputModel:
         logger.info("Parse input")
         params = OpenExcel(**data)
     except Exception as e:
-        message = f"Error on create column on Monday.com: {e}"
+        message = f"Parse error on imput request message Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
                 status="error",
@@ -1740,11 +1740,12 @@ async def open_excel(request: Request) -> OutputModel:
         )
     try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        process_excel_monday(params.file_name,params.download,monday_client,False)
+        excel_monday = ExcelUtilsMonday()
+        excel_monday.process_excel_monday(params.file_name,params.download,monday_client,invocation_id,False)
     except requests.RequestException as e:
         return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Conexión error con Monday Client: {e}")]
+            response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
         )
     #Mensaje de retorno
 
