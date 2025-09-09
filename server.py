@@ -149,7 +149,14 @@ async def create_board_group(request: Request) -> OutputModel:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")  
         
-        message = f"Created new group: {params.group_name} in board: {params.board_id}. ID of the group: {response['data']['create_group']['id']}"
+    #    message = f"Created new group: {params.group_name} in board: {params.board_id}. ID of the group: {response['data']['create_group']['id']}"
+    
+        template = template_env.get_template("response_template_group_board_created.jinja")
+        message = template.render(
+            board_id = params.board_id,
+            group_name = params.group_name
+        )
+    
     else:
         logger.info("sin respuesta")
 
