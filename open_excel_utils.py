@@ -4,18 +4,37 @@ from monday import MondayClient
 from monday.resources.types import BoardKind
 import requests
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
 class ExcelUtilsMonday:
     local_filename = ""
+    uid = ""
+    dwnload:bool = False
+    eliminado_grupo_inicial = False
 
-    def delete_file(self):
-        os.remove(self.local_filename)
-        pass
+    def __init__(self):
+        self.download = False
+        self.eliminado_grupo_inicial = False
 
-    def get_local_fileName(self,filename,uid = None):
-        return f"{uid}/{filename}"
+    def clean_files(self):
+        if self.dwnload:
+            os.remove(self.local_filename)
+            os.remove(self.get_local_uid_path(self.uid))
+
+    def get_local_uid_path(self,uid = None):
+        dir_procesa = 'procesa_archivos'
+        if not os.path.exists(dir_procesa):
+            os.mkdir(dir_procesa)
+        dir_uid = f"{dir_procesa}/{uid}"
+        if not os.path.exists(dir_uid):
+            os.mkdir(dir_uid)
+        return dir_uid
+
+    def get_local_fileName(self,uid = None):
+        dir_uid = self.get_local_uid_path(uid)
+        return f"{dir_uid}/archivo.xlsx"
 
     def download_file(self,url, local_filename):
         """Descarga un archivo desde internet"""
@@ -31,9 +50,11 @@ class ExcelUtilsMonday:
         """Procesa obtiene un pandas dataframe de una url o un archivo local"""
         file_path = filename
         if download == True:
-            file_path= f"{uid}/archivo.xlsx"
+            file_path= self.get_local_fileName(uid)
+            self.uid = uid
+            self.dwnload = True
             self.download_file(filename,file_path)
-            logger.info(f"descarga {filename}")
+            logger.info(f"descarga {filename} {file_path}")
 
         logger.info(f"abriendo:{file_path}")
         df = pd.read_excel(file_path)
@@ -74,10 +95,11 @@ class ExcelUtilsMonday:
             return 'subiteml4'
         return 'undefined'
 
-    def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,simulacion = False):
-        
+    def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,simulacion = False):
+        """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
         df = self.get_pandas(filename,download,uid)
         logger.info(self.list_columns(df))
+        logger.info(uid)
 
         board_id = None
         group_id = None
@@ -85,8 +107,9 @@ class ExcelUtilsMonday:
         item_id_l2 = None
         item_id_l3 = None
         item_id_l4 = None
-        
-        for i in range(50):
+        if rows == 0:
+            rows = len(df.index)
+        for i in range(rows):
             title = self.read_cell(df,"Name",i)
             outline_lvl = self.read_cell(df,"Outline Level",i)
             message = f"Row: {i}"
@@ -106,7 +129,8 @@ class ExcelUtilsMonday:
                 item_id_l3 = self.xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
             if self.identify_type(outline_lvl) == 'subiteml3':
                 item_id_l4 = self.xls_create_sub_item(monday_client,title,item_id_l1,simulacion)
-
+            time.sleep(3)  # Pauses execution for 3 seconds.
+        self.clean_files()
 
     def xls_create_board(self,monday_client:MondayClient,board_name,board_kind,simulacion:bool):
         text = f"Create board: {board_name} {board_kind}"
@@ -142,11 +166,13 @@ class ExcelUtilsMonday:
 
             group_id = respuesta['data']['create_group']['id']
 
-            respuesta2 = monday_client.groups.delete_group(
-                board_id=board_id
-                ,group_id='topics'
-            )
-            logger.info(respuesta2)
+            if not self.eliminado_grupo_inicial:
+                respuesta2 = monday_client.groups.delete_group(
+                    board_id=board_id
+                    ,group_id='topics'
+                )
+                logger.info(respuesta2)
+                self.eliminado_grupo_inicial = True
 
             return  group_id
 

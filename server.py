@@ -24,6 +24,7 @@ from open_excel_utils import *
 from response_classes import *
 
 import json
+from threading import Thread
 
 load_dotenv()
 
@@ -1714,6 +1715,10 @@ async def column_create(request: Request) -> OutputModel:
         )
 
 
+def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
+    excel_monday = ExcelUtilsMonday()
+    excel_monday.process_excel_monday(params.file_name,params.download,monday_client,invocation_id,0,False)
+
 #monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
@@ -1740,16 +1745,20 @@ async def open_excel(request: Request) -> OutputModel:
         )
     try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        excel_monday = ExcelUtilsMonday()
-        excel_monday.process_excel_monday(params.file_name,params.download,monday_client,invocation_id,False)
+        
+        thread = Thread(target=process_excel,args=(params,monday_client,invocation_id))
+        thread.start()
+
     except requests.RequestException as e:
         return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
         )
     #Mensaje de retorno
-
-    message = ""
+    template = template_env.get_template("response_template_process_excel.jinja")
+    message = template.render(
+        file_name = params.file_name
+    )
 
     return OutputModel(
         invocationId=invocation_id,

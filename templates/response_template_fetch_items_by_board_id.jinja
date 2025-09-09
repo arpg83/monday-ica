@@ -6,11 +6,11 @@ Board name: {{ obj_boards.name }}
     Item id: {{ item.id }}
     Item name: {{ item.name }}
       {% for col in item.columns %}
-          Column id: {{ col.id }}
-          Column text: {{ col.text }}
-          Column type: {{ col.type }}
-          Column status: {{ col.status }}
-          Column value: {{ col.value }}
+      Column id: {{ col.id }}
+      Column text: {{ col.text }}
+      Column type: {{ col.type }}
+      Column status: {{ col.status }}
+      Column value: {{ col.value }}
       {% endfor %}
   {% endfor %}
 {% endfor %}
