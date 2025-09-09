@@ -132,6 +132,10 @@ class ExcelUtilsMonday:
             time.sleep(3)  # Pauses execution for 3 seconds.
         self.clean_files()
 
+    def limpiar_nombre(self,texto:str):
+        """Limpia el texto de un titulo"""
+        return str(texto).replace("\"","")
+
     def xls_create_board(self,monday_client:MondayClient,board_name,board_kind,simulacion:bool):
         text = f"Create board: {board_name} {board_kind}"
         logger.info(text)
