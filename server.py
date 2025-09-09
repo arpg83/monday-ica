@@ -88,7 +88,8 @@ async def create_board(request: Request) -> OutputModel:
     template = template_env.get_template("response_template_board_created.jinja")
     message = template.render(
         board_name = params.board_name,
-        board_kind = params.board_kind
+        board_kind = params.board_kind,
+        board_id = board['data']['create_board']['id']
     )
 
     return OutputModel(
@@ -154,7 +155,8 @@ async def create_board_group(request: Request) -> OutputModel:
         template = template_env.get_template("response_template_group_board_created.jinja")
         message = template.render(
             board_id = params.board_id,
-            group_name = params.group_name
+            group_name = params.group_name,
+            group_id = response['data']['create_group']['id']
         )
     
     else:
