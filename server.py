@@ -83,7 +83,13 @@ async def create_board(request: Request) -> OutputModel:
         board_name=params.board_name, board_kind=actual_board_kind
     )
 
-    message = f"Created monday board {params.board_name} of kind {params.board_kind}. ID of the new board: {board['data']['create_board']['id']}"
+    #message = f"Created monday board {params.board_name} of kind {params.board_kind}. ID of the new board: {board['data']['create_board']['id']}"
+    
+    template = template_env.get_template("response_template_board_created.jinja")
+    message = template.render(
+        board_name = params.board_name,
+        board_kind = params.board_kind
+    )
 
     return OutputModel(
             invocationId=invocation_id,
