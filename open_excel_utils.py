@@ -6,6 +6,7 @@ import requests
 import os
 import time
 import shutil
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ class ExcelUtilsMonday:
     wait_time = 1
     esperar = True
     proceso_completo = False
+    error = False
+    message = ""
 
     def __init__(self):
         self.download = False
@@ -96,25 +99,58 @@ class ExcelUtilsMonday:
         logger.debug(index_col)
         return df.iloc[row_id,index_col]
 
+    def salvar_estado(self,error=False):
+        data = {
+            "board_id":self.board_id,
+            "group_id":self.group_id,
+            "item_id":self.item_id_l1,
+            "pos":self.pos,
+            "error":error,
+            "message":str(self.message)
+        }
+        text_json = json.dumps(data)
+        logging.info(text_json)
+        with open(f'{self.get_local_uid_path(self.uid)}/data.json', 'w') as outfile:
+            json.dump(data, outfile)
+
+    def read_estado(self):
+        with open(f'{self.get_local_uid_path(self.uid)}/data.json', 'r') as input:
+            data = json.load(input)
+        self.board_id = data["board_id"]
+        self.group_id = data["group_id"]
+        self.item_id_l1 = data["item_id"]
+        self.pos = data["pos"]
+        self.error = bool(data["error"])
+        logger.info("Fin de proceso")
+        logger.info(self.board_id)
+        logger.info(self.group_id)
+        logger.info(self.item_id_l1)
+        logger.info(self.pos)
+
     def identify_type(self,outline_lvl):
         if str(outline_lvl).strip() == '1':
             return 'board'
         if str(outline_lvl).strip() == '2':
-            return 'group'
+            return 'board'
+            #return 'group'
         if str(outline_lvl).strip() == '3':
-            return 'item'
+            return 'group'
+            #return 'item'
         if str(outline_lvl).strip() == '4':
-            return 'subiteml1'
+            return 'item'
+            #return 'subiteml1'
         if str(outline_lvl).strip() == '5':
-            return 'subiteml2'
+            return 'subiteml1'
+            #return 'subiteml2'#column
         if str(outline_lvl).strip() == '6':
-            return 'subiteml3'
+            return 'subiteml3'#column
         if str(outline_lvl).strip() == '7':
-            return 'subiteml4'
+            return 'subiteml4'#column
         return 'undefined'
 
-    def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,simulacion = False):
+    def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
+        #Actualmente sobrescribe el archivo si continua
         df = self.get_pandas(filename,download,uid)
         logger.info(self.list_columns(df))
         logger.info(uid)
@@ -122,127 +158,124 @@ class ExcelUtilsMonday:
         if rows == 0:
             rows = cant_total_filas
         logger.info(f"se procesaran {rows} de {cant_total_filas} registros")
-        for i in range(rows):
-            self.pos = i
-            title = self.read_cell(df,"Name",i)
-            outline_lvl = self.read_cell(df,"Outline Level",i)
-            message = f"Row: {i}"
-            logger.info(message)
-            logger.info(title)
-            logger.info(outline_lvl)
-            logger.info(self.identify_type(outline_lvl))
-            if self.identify_type(outline_lvl) == 'board':
-                self.board_id = self.xls_create_board(monday_client,title,'public',simulacion)
-            if self.identify_type(outline_lvl) == 'group':
-                self.group_id = self.xls_create_group(monday_client,title,self.board_id,simulacion)
-            if self.identify_type(outline_lvl) == 'item':
-                self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,simulacion)
-            if self.identify_type(outline_lvl) == 'subiteml1':
-                self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
-            if self.identify_type(outline_lvl) == 'subiteml2':
-                self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
-            if self.identify_type(outline_lvl) == 'subiteml3':
-                self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
-            if self.esperar:
-                time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
-        
+        if continuar:
+            logger.info("Continua proceso")
+            self.read_estado()
+            rows = rows + self.pos
+            if self.error:
+                pos = pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
+            self.error = False
+        try:
+            for i in range(rows):
+                if not continuar or (continuar and i > self.pos):
+                    self.pos = i
+                    title = self.read_cell(df,"Name",i)
+                    outline_lvl = self.read_cell(df,"Outline Level",i)
+                    message = f"Row: {i}"
+                    logger.info(message)
+                    logger.info(title)
+                    logger.info(outline_lvl)
+                    logger.info(self.identify_type(outline_lvl))
+                    if self.identify_type(outline_lvl) == 'board':
+                        self.board_id = self.xls_create_board(monday_client,title,'public')
+                    if self.identify_type(outline_lvl) == 'group':
+                        self.group_id = self.xls_create_group(monday_client,title,self.board_id)
+                    if self.identify_type(outline_lvl) == 'item':
+                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id)
+                    if self.identify_type(outline_lvl) == 'subiteml1':
+                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                    if self.identify_type(outline_lvl) == 'subiteml2':
+                        self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                    if self.identify_type(outline_lvl) == 'subiteml3':
+                        self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                    if self.esperar:
+                        time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
+        except Exception as e:
+            self.error = True
+            self.message = e
+            logger.error(e)
         logger.info("Fin de proceso")
         logger.info(self.board_id)
         logger.info(self.group_id)
         logger.info(self.item_id_l1)
         logger.info(self.pos)
-        self.proceso_completo = True
+        if cant_total_filas == rows:
+            self.proceso_completo = True
+        self.salvar_estado(self.error)
         self.clean_files()
 
     def limpiar_nombre(self,texto:str):
         """Limpia el texto de un titulo"""
         return str(texto).replace("\"","")
 
-    def xls_create_board(self,monday_client:MondayClient,board_name,board_kind,simulacion:bool):
+    def xls_create_board(self,monday_client:MondayClient,board_name,board_kind):
         """Crea un board"""
         text = f"Create board: {board_name} {board_kind}"
         logger.info(text)
 
-        if simulacion:
-            board_id = 9986350370
-            return board_id
-        else:
-            #Crear logica de reintento
-            actual_board_kind = BoardKind(board_kind)
-            respuesta = monday_client.boards.create_board(
-                board_name= self.limpiar_nombre(board_name)
-                ,board_kind= actual_board_kind
-                )
-            logger.info(respuesta)
-            board_id = respuesta['data']['create_board']['id'] 
-            return  board_id
+        #Crear logica de reintento
+        actual_board_kind = BoardKind(board_kind)
+        respuesta = monday_client.boards.create_board(
+            board_name= self.limpiar_nombre(board_name)
+            ,board_kind= actual_board_kind
+            )
+        logger.info(respuesta)
+        board_id = respuesta['data']['create_board']['id'] 
+        return  board_id
             
 
-    def xls_create_group(self,monday_client:MondayClient,group_name,board_id,simulacion:bool):
+    def xls_create_group(self,monday_client:MondayClient,group_name,board_id):
         """Crea un grupo"""
         text = f"Create group: {group_name} {board_id}"
         logger.info(text)
         
-        if simulacion:
-            group_id = 'group_mkvg7rfr'
-            return group_id
-        else:
+        #Crear logica de reintento
+        respuesta = monday_client.groups.create_group(
+            group_name= self.limpiar_nombre(group_name),
+            board_id=board_id
+        )
+        logger.info(respuesta)
+
+        group_id = respuesta['data']['create_group']['id']
+
+        if not self.eliminado_grupo_inicial:
             #Crear logica de reintento
-            respuesta = monday_client.groups.create_group(
-                group_name= self.limpiar_nombre(group_name),
+            respuesta2 = monday_client.groups.delete_group(
                 board_id=board_id
+                ,group_id='topics'
             )
-            logger.info(respuesta)
+            logger.info(respuesta2)
+            self.eliminado_grupo_inicial = True
 
-            group_id = respuesta['data']['create_group']['id']
-
-            if not self.eliminado_grupo_inicial:
-                #Crear logica de reintento
-                respuesta2 = monday_client.groups.delete_group(
-                    board_id=board_id
-                    ,group_id='topics'
-                )
-                logger.info(respuesta2)
-                self.eliminado_grupo_inicial = True
-
-            return  group_id
+        return  group_id
 
 
-    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id,simulacion:bool):
+    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id):
         """Crea un item"""
         text = f"Create Item: {item_name} {board_id} {group_id}"
         logger.info(text)
 
-        if simulacion:
-            item_id = 0
-            return item_id
-        else:
-            #Crear logica de reintento
-            respuesta = monday_client.items.create_item(
-                item_name= self.limpiar_nombre(item_name)
-                ,board_id=board_id
-                ,group_id=group_id
-            )
-            logger.info(respuesta)
-            item_id = respuesta['data']['create_item']['id']
-            logger.info(item_id)
-            return item_id
+        #Crear logica de reintento
+        respuesta = monday_client.items.create_item(
+            item_name= self.limpiar_nombre(item_name)
+            ,board_id=board_id
+            ,group_id=group_id
+        )
+        logger.info(respuesta)
+        item_id = respuesta['data']['create_item']['id']
+        logger.info(item_id)
+        return item_id
 
-    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id,simulacion:bool):
+    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id):
         """Crea un subitem"""
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
 
-        #Crear logica de reintento
-        if simulacion:
-            item_id = 0
-            return item_id
-        else:
-            respuesta = monday_client.items.create_subitem(
-                subitem_name = self.limpiar_nombre(item_name)
-                ,parent_item_id = item_id
-            )
-            logger.info(respuesta)
-            item_id = respuesta['data']['create_subitem']['id']
-            logger.info(item_id)
-            return  item_id
+        respuesta = monday_client.items.create_subitem(
+            subitem_name = self.limpiar_nombre(item_name)
+            ,parent_item_id = item_id
+        )
+        logger.info(respuesta)
+        item_id = respuesta['data']['create_subitem']['id']
+        logger.info(item_id)
+        return  item_id
