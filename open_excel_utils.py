@@ -132,21 +132,21 @@ class ExcelUtilsMonday:
         if str(outline_lvl).strip() == '1':
             return 'board'
         if str(outline_lvl).strip() == '2':
-            return 'board'
-            #return 'group'
-        if str(outline_lvl).strip() == '3':
+            #return 'board'
             return 'group'
-            #return 'item'
-        if str(outline_lvl).strip() == '4':
+        if str(outline_lvl).strip() == '3':
+            #return 'group'
             return 'item'
-            #return 'subiteml1'
-        if str(outline_lvl).strip() == '5':
+        if str(outline_lvl).strip() == '4':
+            #return 'item'
             return 'subiteml1'
+#        if str(outline_lvl).strip() == '5':
+#            return 'subiteml1'
             #return 'subiteml2'#column
-        if str(outline_lvl).strip() == '6':
-            return 'subiteml3'#column
-        if str(outline_lvl).strip() == '7':
-            return 'subiteml4'#column
+#        if str(outline_lvl).strip() == '6':
+#            return 'subiteml3'#column
+#        if str(outline_lvl).strip() == '7':
+#            return 'subiteml4'#column
         return 'undefined'
 
     def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
