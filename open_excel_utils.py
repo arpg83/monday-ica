@@ -5,13 +5,14 @@ from monday.resources.types import BoardKind
 import requests
 import os
 import time
+import shutil
 
 logger = logging.getLogger(__name__)
 
 class ExcelUtilsMonday:
     local_filename = ""
     uid = ""
-    dwnload:bool = False
+    download:bool = False
     eliminado_grupo_inicial = False
     board_id = None
     group_id = None
@@ -22,15 +23,19 @@ class ExcelUtilsMonday:
     pos = 0
     wait_time = 1
     esperar = True
+    proceso_completo = False
 
     def __init__(self):
         self.download = False
         self.eliminado_grupo_inicial = False
 
     def clean_files(self):
-        if self.dwnload:
+        if self.proceso_completo:
+            logger.info("Eliminando")
+            logger.info(self.local_filename)
             os.remove(self.local_filename)
-            os.remove(self.get_local_uid_path(self.uid))
+            logger.info(self.get_local_uid_path(self.uid))
+            os.rmdir(self.get_local_uid_path(self.uid))
 
     def get_local_uid_path(self,uid = None):
         dir_procesa = 'procesa_archivos'
@@ -41,9 +46,9 @@ class ExcelUtilsMonday:
             os.mkdir(dir_uid)
         return dir_uid
 
-    def get_local_fileName(self,uid = None):
+    def get_local_fileName(self,uid = None,filename = "archivo.xlsx"):
         dir_uid = self.get_local_uid_path(uid)
-        return f"{dir_uid}/archivo.xlsx"
+        return f"{dir_uid}/{filename}"
 
     def download_file(self,url, local_filename):
         """Descarga un archivo desde internet"""
@@ -58,12 +63,16 @@ class ExcelUtilsMonday:
     def get_pandas(self,filename,download=False,uid = None):
         """Procesa obtiene un pandas dataframe de una url o un archivo local"""
         file_path = filename
+        self.uid = uid
         if download == True:
-            file_path= self.get_local_fileName(uid)
-            self.uid = uid
-            self.dwnload = True
+            file_path= self.get_local_fileName(uid,"archivo.xlsx")
+            self.download = True
             self.download_file(filename,file_path)
             logger.info(f"descarga {filename} {file_path}")
+        else:
+            file_path= self.get_local_fileName(uid,"archivo.xlsx")
+            shutil.copy(filename,file_path)
+        self.local_filename = file_path
 
         logger.info(f"abriendo:{file_path}")
         df = pd.read_excel(file_path)
@@ -109,9 +118,10 @@ class ExcelUtilsMonday:
         df = self.get_pandas(filename,download,uid)
         logger.info(self.list_columns(df))
         logger.info(uid)
-
+        cant_total_filas = len(df.index)
         if rows == 0:
-            rows = len(df.index)
+            rows = cant_total_filas
+        logger.info(f"se procesaran {rows} de {cant_total_filas} registros")
         for i in range(rows):
             self.pos = i
             title = self.read_cell(df,"Name",i)
@@ -135,6 +145,13 @@ class ExcelUtilsMonday:
                 self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,simulacion)
             if self.esperar:
                 time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
+        
+        logger.info("Fin de proceso")
+        logger.info(self.board_id)
+        logger.info(self.group_id)
+        logger.info(self.item_id_l1)
+        logger.info(self.pos)
+        self.proceso_completo = True
         self.clean_files()
 
     def limpiar_nombre(self,texto:str):
@@ -142,6 +159,7 @@ class ExcelUtilsMonday:
         return str(texto).replace("\"","")
 
     def xls_create_board(self,monday_client:MondayClient,board_name,board_kind,simulacion:bool):
+        """Crea un board"""
         text = f"Create board: {board_name} {board_kind}"
         logger.info(text)
 
@@ -149,6 +167,7 @@ class ExcelUtilsMonday:
             board_id = 9986350370
             return board_id
         else:
+            #Crear logica de reintento
             actual_board_kind = BoardKind(board_kind)
             respuesta = monday_client.boards.create_board(
                 board_name= self.limpiar_nombre(board_name)
@@ -160,6 +179,7 @@ class ExcelUtilsMonday:
             
 
     def xls_create_group(self,monday_client:MondayClient,group_name,board_id,simulacion:bool):
+        """Crea un grupo"""
         text = f"Create group: {group_name} {board_id}"
         logger.info(text)
         
@@ -167,6 +187,7 @@ class ExcelUtilsMonday:
             group_id = 'group_mkvg7rfr'
             return group_id
         else:
+            #Crear logica de reintento
             respuesta = monday_client.groups.create_group(
                 group_name= self.limpiar_nombre(group_name),
                 board_id=board_id
@@ -176,6 +197,7 @@ class ExcelUtilsMonday:
             group_id = respuesta['data']['create_group']['id']
 
             if not self.eliminado_grupo_inicial:
+                #Crear logica de reintento
                 respuesta2 = monday_client.groups.delete_group(
                     board_id=board_id
                     ,group_id='topics'
@@ -187,6 +209,7 @@ class ExcelUtilsMonday:
 
 
     def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id,simulacion:bool):
+        """Crea un item"""
         text = f"Create Item: {item_name} {board_id} {group_id}"
         logger.info(text)
 
@@ -194,6 +217,7 @@ class ExcelUtilsMonday:
             item_id = 0
             return item_id
         else:
+            #Crear logica de reintento
             respuesta = monday_client.items.create_item(
                 item_name= self.limpiar_nombre(item_name)
                 ,board_id=board_id
@@ -205,9 +229,11 @@ class ExcelUtilsMonday:
             return item_id
 
     def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id,simulacion:bool):
+        """Crea un subitem"""
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
 
+        #Crear logica de reintento
         if simulacion:
             item_id = 0
             return item_id

@@ -1733,7 +1733,7 @@ async def column_create(request: Request) -> OutputModel:
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     excel_monday = ExcelUtilsMonday()
     excel_monday.esperar = False
-    excel_monday.process_excel_monday(params.file_name,params.download,monday_client,invocation_id,0,False)
+    excel_monday.process_excel_monday(params.file_name,params.download,monday_client,invocation_id,params.rows,False)
 
 #monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")

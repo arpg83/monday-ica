@@ -163,6 +163,7 @@ class CreateColumn(BaseModel):
 class OpenExcel(BaseModel):
     file_name:str
     download:bool = False 
+    rows:int = 0
 
  
     
