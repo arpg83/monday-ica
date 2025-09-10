@@ -21,6 +21,7 @@ class ExcelUtilsMonday:
     item_id_l2 = None
     item_id_l3 = None
     item_id_l4 = None
+    item_id_l5 = None
     pos = 0
     wait_time = 1
     esperar = True
@@ -189,6 +190,8 @@ class ExcelUtilsMonday:
                         self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.identify_type(outline_lvl) == 'subiteml3':
                         self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                    if self.identify_type(outline_lvl) == 'subiteml4':
+                        self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.esperar:
                         time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
         except Exception as e:
