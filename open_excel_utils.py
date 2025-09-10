@@ -164,6 +164,7 @@ class ExcelUtilsMonday:
             rows = rows + self.pos
             if self.error:
                 pos = pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
+            self.eliminado_grupo_inicial = True # Seteo en verdadero que el grupo inicial fue eliminado para que no dispare el error de que el grupo inicial no existe
             self.error = False
         try:
             for i in range(rows):
@@ -221,6 +222,8 @@ class ExcelUtilsMonday:
             )
         logger.info(respuesta)
         board_id = respuesta['data']['create_board']['id'] 
+        #Resetea el flag de borrado de grupo inicial
+        self.eliminado_grupo_inicial = False
         return  board_id
             
 
