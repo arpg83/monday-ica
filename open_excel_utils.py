@@ -10,6 +10,20 @@ import json
 
 logger = logging.getLogger(__name__)
 
+class AnalisisItem():
+    row_inicio:int
+    row_fin:int
+    max_outline:int
+    item_name:str
+
+    def __init__(self):
+        self.row_inicio = 0
+        self.row_fin = 0
+    
+    def get_log(self):
+        """Genera linea de log"""
+        return f"item: {self.item_name} max_outline: {self.max_outline} inicio:{self.row_inicio +1} fin:{self.row_fin +1}"
+
 class ExcelUtilsMonday:
     local_filename = ""
     uid = ""
@@ -38,7 +52,8 @@ class ExcelUtilsMonday:
         if self.proceso_completo:
             logger.info("Eliminando")
             logger.info(self.local_filename)
-            os.remove(self.local_filename)
+            if os.path.exists(self.local_filename):
+                os.remove(self.local_filename)
             logger.info(self.get_local_uid_path(self.uid))
             #Borrar data.json
             data_json = f'{self.get_local_uid_path(self.uid)}/data.json'
@@ -181,27 +196,29 @@ class ExcelUtilsMonday:
         logger.info(self.list_columns(df))
         logger.info(uid)
         cant_total_filas = len(df.index)
+        cantidad_a_procesar = 0
         if rows == 0:
-            rows = cant_total_filas
-        if continuar and rows != 0:
-            rows = self.pos + rows
-            if rows < cant_total_filas:
-                rows = cant_total_filas
-        if not continuar:
-            self.pos = 0
-        logger.info(f"se procesaran {rows} {self.pos} de {cant_total_filas} registros")
+            cantidad_a_procesar = cant_total_filas
         if continuar:
             logger.info("Continua proceso")
             self.read_estado()
+        if continuar and rows != 0:
+            cantidad_a_procesar = self.pos + rows + 1
+            if cantidad_a_procesar >= cant_total_filas:
+                cantidad_a_procesar = cant_total_filas
+        if not continuar:
+            self.pos = 0
+        logger.info(f"se procesaran {rows} {self.pos} de {cantidad_a_procesar} registros")
+        if continuar:
             if self.error:
                 self.pos = self.pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
 
             self.eliminado_grupo_inicial = True # Seteo en verdadero que el grupo inicial fue eliminado para que no dispare el error de que el grupo inicial no existe
             self.error = False
         logger.info("Cantidad de rows:")
-        logger.info(rows)
+        logger.info(cantidad_a_procesar)
         try:
-            for i in range(rows):
+            for i in range(cantidad_a_procesar):
                 if not continuar or (continuar and i > self.pos):
                     self.pos = i
                     title = self.read_cell(df,"Name",i)
@@ -319,6 +336,34 @@ class ExcelUtilsMonday:
         logger.info(item_id)
         return  item_id
     
-    def analizar_excel(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
-
-        pass
+    def analizar_excel(self,filename, download ,uid = None):
+        df = self.get_pandas(filename,download,uid)
+        cant_total_filas = len(df.index)
+        analisis_item = AnalisisItem()
+        primer_item = True
+        arr_analisis_items = []
+        for i in range(cant_total_filas):
+            self.pos = i
+            title = self.read_cell(df,"Name",i)
+            outline_lvl = self.read_cell(df,"Outline Level",i)
+            tipo = self.identify_type(outline_lvl)
+            logger.debug(tipo)
+            logger.debug(outline_lvl)
+            if tipo == 'item':
+                if not primer_item and analisis_item.max_outline > 4:
+                    analisis_item.row_fin = i -1
+                    arr_analisis_items.append(analisis_item)
+                analisis_item = AnalisisItem()
+                analisis_item.row_inicio = i
+                primer_item = False
+                analisis_item.item_name = title
+                analisis_item.max_outline = int(outline_lvl)
+            else:
+                if not primer_item and int(analisis_item.max_outline) < int(outline_lvl):
+                    analisis_item.max_outline = int(outline_lvl)
+        for obj in arr_analisis_items:
+            analisis:AnalisisItem = obj
+            logger.debug(analisis.get_log())
+        self.proceso_completo = True
+        self.clean_files()
+        return arr_analisis_items

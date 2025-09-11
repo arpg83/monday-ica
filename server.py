@@ -1739,6 +1739,43 @@ def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str)
         uid = params.uid
     excel_monday.process_excel_monday(params.file_name,params.download,monday_client,uid,params.rows,params.continuar)
 
+
+@app.post("/monday/analizar_excel")
+async def analizar_excel(request: Request) -> OutputModel:
+    invocation_id = str(uuid4())
+    
+    data = await request.json()
+    params = None
+    try:
+        #parseo los datos del request
+        logger.info("Parse input")
+        params = OpenExcel(**data)
+    except Exception as e:
+        message = f"Parse error on imput request message Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    excel_monday = ExcelUtilsMonday()
+    uid = invocation_id
+    if params.continuar:
+        uid = params.uid
+    arr_analisis = excel_monday.analizar_excel(params.file_name,params.download,uid)
+
+    message = ""
+    template = template_env.get_template("response_template_analiza_excel.jinja")
+    message = template.render(
+        arr_analisis = arr_analisis
+    )
+    logger.info(message)
+    return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+    )
+
+
 #monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
