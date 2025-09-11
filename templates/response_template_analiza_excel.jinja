@@ -1,0 +1,8 @@
+Analisis del archivo {{ archivo }}
+
+{% for analisis in arr_analisis %}
+Item: {{ analisis.item_name }}
+    inicio: {{ analisis.row_inicio + 1 }}
+    Fin: {{ analisis.row_fin + 1 }}
+    Max Outline: {{ analisis.max_outline }}
+{% endfor %}
