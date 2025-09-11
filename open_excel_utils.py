@@ -28,6 +28,7 @@ class ExcelUtilsMonday:
     proceso_completo = False
     error = False
     message = ""
+    continuar:bool = False
 
     def __init__(self):
         self.download = False
@@ -39,6 +40,10 @@ class ExcelUtilsMonday:
             logger.info(self.local_filename)
             os.remove(self.local_filename)
             logger.info(self.get_local_uid_path(self.uid))
+            #Borrar data.json
+            data_json = f'{self.get_local_uid_path(self.uid)}/data.json'
+            if os.path.exists(data_json):
+                os.remove(data_json)
             os.rmdir(self.get_local_uid_path(self.uid))
 
     def get_local_uid_path(self,uid = None):
@@ -64,19 +69,28 @@ class ExcelUtilsMonday:
         self.local_filename = local_filename
         return local_filename
 
+    def get_file(self,uid,filename):
+        if self.continuar and os.path.exists(self.local_filename):
+            return self.local_filename
+        else:
+            file_path = filename
+            self.uid = uid
+            if self.download:
+                file_path= self.get_local_fileName(uid,"archivo.xlsx")
+                
+                self.download_file(filename,file_path)
+                logger.info(f"descarga {filename} {file_path}")
+            else:
+                file_path= self.get_local_fileName(uid,"archivo.xlsx")
+                shutil.copy(filename,file_path)
+            self.local_filename = file_path
+            return self.local_filename
+
     def get_pandas(self,filename,download=False,uid = None):
         """Procesa obtiene un pandas dataframe de una url o un archivo local"""
-        file_path = filename
-        self.uid = uid
-        if download == True:
-            file_path= self.get_local_fileName(uid,"archivo.xlsx")
+        if download:
             self.download = True
-            self.download_file(filename,file_path)
-            logger.info(f"descarga {filename} {file_path}")
-        else:
-            file_path= self.get_local_fileName(uid,"archivo.xlsx")
-            shutil.copy(filename,file_path)
-        self.local_filename = file_path
+        file_path = self.get_file(uid,filename)
 
         logger.info(f"abriendo:{file_path}")
         df = pd.read_excel(file_path)
@@ -86,9 +100,11 @@ class ExcelUtilsMonday:
         return df
 
     def list_columns(self,df:pd.DataFrame):
+        """lista columnas del documento pandas/excel"""
         return df.columns.values
 
     def read_cell(self,df:pd.DataFrame,column_name,row_id):
+        """Lee una celda especifica"""
         arrCols = df.columns.values
         index_col = 0
         for index,col in enumerate(arrCols):
@@ -101,13 +117,15 @@ class ExcelUtilsMonday:
         return df.iloc[row_id,index_col]
 
     def salvar_estado(self,error=False):
+        """Salva el estado del proceso en un archivo json data.json"""
         data = {
             "board_id":self.board_id,
             "group_id":self.group_id,
             "item_id":self.item_id_l1,
             "pos":self.pos,
             "error":error,
-            "message":str(self.message)
+            "message":str(self.message),
+            "local_filename":str(self.local_filename)
         }
         text_json = json.dumps(data)
         logging.info(text_json)
@@ -115,6 +133,7 @@ class ExcelUtilsMonday:
             json.dump(data, outfile)
 
     def read_estado(self):
+        """Recupera el estado del proceso del archivo json data.json"""
         with open(f'{self.get_local_uid_path(self.uid)}/data.json', 'r') as input:
             data = json.load(input)
         self.board_id = data["board_id"]
@@ -122,13 +141,17 @@ class ExcelUtilsMonday:
         self.item_id_l1 = data["item_id"]
         self.pos = data["pos"]
         self.error = bool(data["error"])
+        self.local_filename = data["local_filename"]
         logger.info("Fin de proceso")
         logger.info(self.board_id)
         logger.info(self.group_id)
         logger.info(self.item_id_l1)
         logger.info(self.pos)
+        logger.info(self.error)
+        logger.info(self.local_filename)
 
     def identify_type(self,outline_lvl):
+        """Identifica si la fila es un board, grupo, item o subitem"""
         if str(outline_lvl).strip() == '1':
             return 'board'
         if str(outline_lvl).strip() == '2':
@@ -148,9 +171,11 @@ class ExcelUtilsMonday:
 #        if str(outline_lvl).strip() == '7':
 #            return 'subiteml4'#column
         return 'undefined'
+    
 
     def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
+        self.continuar = continuar
         #Actualmente sobrescribe el archivo si continua
         df = self.get_pandas(filename,download,uid)
         logger.info(self.list_columns(df))
@@ -158,15 +183,23 @@ class ExcelUtilsMonday:
         cant_total_filas = len(df.index)
         if rows == 0:
             rows = cant_total_filas
-        logger.info(f"se procesaran {rows} de {cant_total_filas} registros")
+        if continuar and rows != 0:
+            rows = self.pos + rows
+            if rows < cant_total_filas:
+                rows = cant_total_filas
+        if not continuar:
+            self.pos = 0
+        logger.info(f"se procesaran {rows} {self.pos} de {cant_total_filas} registros")
         if continuar:
             logger.info("Continua proceso")
             self.read_estado()
-            rows = rows + self.pos
             if self.error:
-                pos = pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
+                self.pos = self.pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
+
             self.eliminado_grupo_inicial = True # Seteo en verdadero que el grupo inicial fue eliminado para que no dispare el error de que el grupo inicial no existe
             self.error = False
+        logger.info("Cantidad de rows:")
+        logger.info(rows)
         try:
             for i in range(rows):
                 if not continuar or (continuar and i > self.pos):
@@ -224,7 +257,7 @@ class ExcelUtilsMonday:
             ,board_kind= actual_board_kind
             )
         logger.info(respuesta)
-        board_id = respuesta['data']['create_board']['id'] 
+        board_id = respuesta['data']['create_board']['id']
         #Resetea el flag de borrado de grupo inicial
         self.eliminado_grupo_inicial = False
         return  board_id
@@ -285,3 +318,7 @@ class ExcelUtilsMonday:
         item_id = respuesta['data']['create_subitem']['id']
         logger.info(item_id)
         return  item_id
+    
+    def analizar_excel(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
+
+        pass
