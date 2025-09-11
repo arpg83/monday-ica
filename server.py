@@ -255,10 +255,30 @@ async def create_item(request: Request) -> OutputModel:
 
         if params.parent_item_id is None and params.group_id is not None:
         #if "board_id" in data:
-            message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id} and group Id: {params.group_id}."   
+            #message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id} and group Id: {params.group_id}."   
+            logger.info(response['data']['create_item']['id'])
+            template = template_env.get_template("response_template_item_created.jinja")
+            message = template.render(
+                item_name = params.item_name,
+                board_id = params.board_id,
+                group_id = params.group_id,
+                item_id = response['data']['create_item']['id'],
+                flag_tipo = "item",
+                Columns_values = params.column_values
+                )
         elif params.parent_item_id is not None and params.group_id is None:
         #elif "parent_item_id" in data:
-             message = f"Created a new Monday.com sub item: {params.parent_item_id} on board Id: {params.board_id}."       
+             #message = f"Created a new Monday.com sub item: {params.parent_item_id} on board Id: {params.board_id}."
+            logger.info(response)
+            subitemid = response['data']['create_subitem']['id']
+            template = template_env.get_template("response_template_item_created.jinja")
+            message = template.render(
+                item_name = params.item_name,
+                parent_item_id = params.parent_item_id,
+                flag_tipo = "subitem",
+                Columns_values = params.column_values,
+                item_id = subitemid
+                )       
         else:
             message = f"Created a new Monday.com item: {params.item_name} on board Id: {params.board_id}."
 

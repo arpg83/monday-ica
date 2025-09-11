@@ -1,9 +1,16 @@
+{% if flag_tipo == "item" %}
 Item created successfully:
   - Board Id: {{ board_id }}
   - Item Name {{ item_name }}
-  - Group Id: {{ group_id }}
-  - Parent Item Id: {{ parent_item_id }}
   - Columns Values: {{ Columns_values }}
-
+  - Group Id: {{ group_id }}
+  - item id: {{ item_id }}
+  {% endif %}
+{% if flag_tipo == "subitem" %}
+  - Item Id: {{ item_id }}
+  - Parent Item Id: {{ parent_item_id }}
+  - subitem Name: {{ item_name }}
+  - Columns Values: {{ Columns_values }}
+  {% endif %}
 
 
