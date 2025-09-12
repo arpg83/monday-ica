@@ -127,7 +127,7 @@ class AddDocBlockParams(BaseModel):
     doc_id: str
     block_type: str
     content: str
-    after_block_id: str   
+    after_block_id: Optional[str] = None   
 
 
 #----------------------------------------------------------------------------------------------------------------- 

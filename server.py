@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,CreateColumn,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,CreateColumn,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -463,18 +463,6 @@ async def create_doc(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
         )
-    
-    '''
-    try:
-        monday_workspace_name = MondayClient(os.getenv("MONDAY_WORKSPACE_NAME"))
-    except requests.RequestException as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Connection error with Monday Client: {e}")]
-        )    
-    '''
-     #MONDAY_WORKSPACE_NAME = os.getenv("MONDAY_WORKSPACE_NAME")
-     #MONDAY_WORKSPACE_URL = f"https://{MONDAY_WORKSPACE_NAME}.monday.com"
     
     doc_id = created["id"]
     try:
@@ -1420,7 +1408,90 @@ async def archive_item_by_id(request: Request) -> OutputModel:
 
 
 # 19 - monday-add-doc-block: Adds a block to an existing document
+@app.post("/monday/add/block")
+async def monday_add_doc_block(request: Request) -> OutputModel:
+    """
+    Add a block to a document.
 
+    Args:
+        doc_id (str): Document ID
+        block_type (str): Block type (normal_text, bullet_list, etc.)
+        content (str): Content text
+        after_block_id (Optional[str]): Block ID after which to insert
+
+    Returns:
+        str: Confirmation with created block info
+    """
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",        
+        response=[ResponseMessageModel(message="Conexion error with Monday Client: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = AddDocBlockParams(**data)
+    
+    except Exception as e:
+        message = f"Error add doc block Monday.com: {e}"
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+        )
+    response = None
+    
+    escaped_content = params.content.replace('"', '\\"')
+    after_param = f"after_block_id: {params.after_block_id}," if params.after_block_id else ""
+    
+    mutation = f"""
+        mutation {{
+            create_doc_block (
+                type: {params.block_type},
+                doc_id: {params.doc_id},{after_param}
+                content: "{escaped_content}"
+            ) {{
+                id
+            }}
+        }}
+    """
+
+    logger.info("el mutation es: ")
+    logger.info(mutation)
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except requests.RequestException as e:
+       logger.info(e)
+       return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error execute add_block_doc in Monday.com: {e}")]               
+        )
+    try:
+        block = (response or {}).get("data", {}).get("create_doc_block")
+        logger.info(block)
+    except Exception as e:
+        logger.info("error en el try de block")
+        return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=f"Error processing response: {e}")]            
+    )
+    if not block is None:
+        logger.info("Procesa respuesta")
+        message = f"Add block {block['id']} Monday.com"
+    else:
+        logger.info("sin respuesta")
+    
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
 
 #______________________________________________________________________________________________________________
 #___________________________ DELETE____________________________________________________________________________
