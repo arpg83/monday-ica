@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,CreateColumn,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -45,9 +45,6 @@ template_env = Environment(loader=FileSystemLoader("templates"))
 T = TypeVar('T', bound=BaseModel)
 
 app = FastAPI()
-
-#___________________________ Metodos pendientes ______________________________________________________________
-#monday-add-doc-block: Adds a block to an existing document
 
 #______________________________________________________________________________________________________________
 #___________________________ CREATE____________________________________________________________________________
@@ -945,13 +942,13 @@ async def get_docs(request: Request) -> OutputModel:
 @app.post("/monday/doc_content/get")
 async def get_doc_content(request: Request) -> OutputModel:
         """
-        Get the content blocks of a document.
+        Lista el contenido de los bloques que posee un documento de Monday.com
 
         Parámetros de entrada:
-            doc_id (str): Document ID
+            doc_id (str): ID del documento
 
         Retorna:
-            str: Document content listing
+            str: Lista con el contenido del documento.
         """
         invocation_id = str(uuid4())
         logger.info(invocation_id)
@@ -1058,12 +1055,12 @@ async def get_doc_content(request: Request) -> OutputModel:
 @app.get("/monday/users/list")
 async def listUsers(request: Request) -> OutputModel:
     """
-    List Users from Monday.
+    Lista los usuarios de Monday.com
 
     Parámetros de entrada:
         
     Retorna:
-        List of Users
+        Lista de usuarios
         
     """
     invocation_id = str(uuid4())
@@ -1097,7 +1094,9 @@ async def listUsers(request: Request) -> OutputModel:
 # 14 - monday-get-item-by-id: Retrieves items by theirs IDs
 @app.post("/monday/item/get_item_by_id")
 async def get_item_by_id(request: Request) -> OutputModel:
-    """Fetch specific Monday.com items by their IDs"""
+    """
+    Lista todas las tareas a traves de los IDs especificados, en Monday.com
+    """
     
     #genera id unico
     invocation_id = str(uuid4())
@@ -1171,9 +1170,15 @@ async def get_item_by_id(request: Request) -> OutputModel:
 # 15 - #monday-get-board-columns: Get the Columns of a Monday.com Board
 @app.post("/monday/columns/get")
 async def get_board_columns(request: Request) -> OutputModel:    
-    """Get the Columns of a Monday.com Board.
+    """
+    Lista todas las columnas de un tablero de Monday.com 
+        
         Parámetros de entrada:
-           boardId: Monday.com Board ID that the Item or Sub-item is on.
+
+           boardId: ID del tablero a consultar 
+        
+        Retorna:
+              Detalle de las columnas de cada tarea o subtarea del tablero de Monday.com 
     """
     invocation_id = str(uuid4())
 
@@ -1255,12 +1260,14 @@ async def get_board_columns(request: Request) -> OutputModel:
 # 16 - monday-update-item: Update a Monday.com item's or sub-item's column values. 
 @app.put("/monday/item/update")
 async def update_item(request: Request) -> OutputModel:
-    '''Update a Monday.com item's or sub-item's column values.
+    '''
+    Update a Monday.com item's or sub-item's column values.
+    Actualiza el valor de las columnas correspondientes a una tarea o subtarea de Monday.com
 
     Parámetros de entrada:
-        boardId: Monday.com Board ID that the Item or Sub-item is on.
-        itemId: Monday.com Item or Sub-item ID to update the columns of.
-        columnValues: Dictionary of column values to update the Monday.com Item or Sub-item with. ({column_id: value}).
+        boardId: ID del tablero de Monday.com al que pertenece la tarea o subtarea cuyas columnas se desean actualizar.
+        itemId: ID de la tarea o subtarea de Monday.com a la cual se le actualizarán los valores de las columnas.
+        columnValues: Diccionario de valores de columna para actualizar la tarea o subtarea de Monday.com con. ({column_id: valor}).        
     '''
  
     invocation_id = str(uuid4())
@@ -1319,7 +1326,14 @@ async def update_item(request: Request) -> OutputModel:
 # 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
 @app.post("/monday/item/move_item_to_group")
 async def move_item_to_group(request: Request) -> OutputModel:
-    """Move item to another group"""
+    """
+    Mover una tarea a otro grupo
+
+       Parámetros de entrada:        
+        item_Id: ID de la tarea o subtarea de Monday.com que será trasladada a otro grupo.
+        group_id: ID del grupo de Monday.com donde se alojará la tarea o subtarea trasladada.
+
+    """
     #monday-move-item-to-group
     invocation_id = str(uuid4())
     monday_client = None
@@ -1375,7 +1389,13 @@ async def move_item_to_group(request: Request) -> OutputModel:
 # 18 - monday-archive-item: Archives a Monday.com item
 @app.post("/monday/archive/item")
 async def archive_item_by_id(request: Request) -> OutputModel:
-    """Archive item by id args item_id"""
+    """
+    Archivar una tarea en Monday.com
+
+       Parámetros de entrada:
+           itemId: ID de la tarea o subtarea de Monday.com que será archivada.
+      
+    """
     invocation_id = str(uuid4())
     monday_client = None
     try: 
@@ -1422,21 +1442,20 @@ async def archive_item_by_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
-
 # 19 - monday-add-doc-block: Adds a block to an existing document
 @app.post("/monday/add/block")
 async def monday_add_doc_block(request: Request) -> OutputModel:
     """
-    Add a block to a document.
-
+    Incorporar un nuevo bloque a un documento.
+    
     Parámetros de entrada:
-        doc_id (str): Document ID
-        block_type (str): Block type (normal_text, bullet_list, etc.)
-        content (str): Content text
-        after_block_id (Opcional[str]): Block ID after which to insert
+        doc_id (str): ID del documento donde se incorporará el nuevo bloque
+        block_type (str): Tipo de bloque que se incorporará (normal_text, bullet_list, etc.)
+        content (str): Texto del contenido
+        after_block_id (Opcional[str]): ID del bloque después del cual se realizará la inserción del nuevo bloque.
 
     Retorna:
-        str: Confirmation with created block info
+        str: Confirmación con la información del nuevo bloque creado.
     """
     invocation_id = str(uuid4())
     monday_client = None
@@ -1516,7 +1535,14 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
 # 20 - monday-delete-group: Deletes a Monday.com group
 @app.delete("/monday/group/delete")
 async def delete_group_by_id(request: Request) -> OutputModel:
-    """Delete group by id args group_id"""
+    """
+    Eliminar un grupo de un tablero de Monday.com 
+
+       Parámetros de entrada: 
+            board_id: ID del tablero donde se encuentra el grupo a eliminar.       
+            group_id: ID del grupo que será eliminado de Monday.com .
+
+    """
     invocation_id = str(uuid4())
     monday_client = None
     try: 
@@ -1554,8 +1580,6 @@ async def delete_group_by_id(request: Request) -> OutputModel:
                     response=[ResponseMessageModel(message=message)]
             )
     
-
-
     if not response is None:
         logger.info("Procesa respuesta")
         message = f"ID del Grupo eliminado en Monday.com:  {response['data']['delete_group']['id']}"
@@ -1570,7 +1594,13 @@ async def delete_group_by_id(request: Request) -> OutputModel:
 # 21 - monday-delete-item: Deletes a Monday.com item
 @app.delete("/monday/item/delete")
 async def delete_item_by_id(request: Request) -> OutputModel:
-    """Delete item by id args item_id"""
+    """
+    Eliminar una tarea de Monday.com
+
+       Parámetros de entrada:
+            item_id: ID de la tarea o subtarea de Monday.com que será eliminada.
+
+    """
     invocation_id = str(uuid4())
     monday_client = None
     try: 
@@ -1628,13 +1658,13 @@ async def delete_item_by_id(request: Request) -> OutputModel:
 @app.post("/monday/board/fetch_items_by_board_id")
 async def fetch_items_by_board_id(request: Request) -> OutputModel:
     """
-    fetch items by borard id
+    Lista las tareas contenidas en un tablero de Monday.com
 
     Parámetros de entrada:
-        board_id (str): The id of the board.
+        board_id (str): ID del tablero.
 
     Retorna:
-
+        Una lista de grupos, tareas y subtareas contenidas en el tablero especificado.
     """
     invocation_id = str(uuid4())
 
@@ -1771,13 +1801,18 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
 #    )
 #-----------------------------------------------------------------
 
-#----------------REVISAR-------------------------------------------------
-
-#El create column lo cree por curiosidad pero me da problemas al establecer el tipo de columna Actualmente no funciona
-#create_column
 @app.post("/monday/columns/create")
-async def column_create(request: Request) -> OutputModel:
-    """Create column Parámetros de entrada: board_id, column_title, column_type, defaults"""
+async def create_column(request: Request) -> OutputModel:
+    """
+    Crea una nueva columna en Monday. com 
+    
+    Parámetros de entrada: 
+        board_id: ID del tablero
+        column_title: Nombre de la columna que se incorporará 
+        column_type: Tipo de columna          
+        defaults: Valores predeterminados de la nueva columna (json).     
+
+    """
     #Creo un identificador unico
     invocation_id = str(uuid4())
     try: 
@@ -1785,50 +1820,113 @@ async def column_create(request: Request) -> OutputModel:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
-        invocationId=invocation_id,        
-        status="error",
+        invocationId=invocation_id, 
         response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
     )
-    #Traigo losd atos del request
+    #Traigo los datos del request
     data = await request.json()
     params = None
+    
     try:
         #parseo los datos del request
         logger.info("Parse input")
-        params = CreateColumn(**data)
+        params = CreateColumnParams(**data)
+        logger.info(params)
     except Exception as e:
         message = f"Error al recuperar los parámetros, verifique que el ID del tablero proporcionado, exista en Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
-                status="error",
                 response=[ResponseMessageModel(message=message)]
         )
+    
+    # Manejo de defaults → string JSON escapado
+    defaults_str = ""
+    if params.defaults is not None:
+        defaults_json = json.dumps(params.defaults, ensure_ascii=False)
+        defaults_str = f', defaults: "{defaults_json.replace("\"", "\\\"")}"'
+
+    # Construir mutación GraphQL
+    mutation = f"""
+        mutation {{
+            create_column (
+                board_id: {params.board_id},
+                title: "{params.column_title}",
+                column_type: {params.column_type or "text"}
+                {defaults_str}
+            ) {{
+                id
+            }}
+        }}
+    """
+
+    logger.info("Mutación enviada a Monday:")
+    logger.info(mutation)
+
+    # Ejecutar mutación
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la creación de columna en Monday.com: {e}")]
+        )
+
+    # Procesar respuesta
+    try:
+        column = (response or {}).get("data", {}).get("create_column")
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
+        )
+
+    # Generar mensaje de salida
+    if column:
+        message = f"Columna creada en Monday.com con ID: {column['id']}"
+    else:
+        message = "No se recibió respuesta de Monday.com al crear la columna."
+
+    return OutputModel(
+        invocationId=invocation_id,
+        status="success",
+        response=[ResponseMessageModel(message=message)]
+    )
+
+    
+    '''
+    
     response = None
+
     #llamada al servicio de monday
-    #Imprimo la respuesta
+       #Imprimo la respuesta
     try:
         logger.info("Ejecuta api monday")
+
         response = monday_client.columns.create_column(
             board_id= params.board_id,
             column_title= params.column_title,
-            #column_type= params.column_type
+            column_type= params.column_type,
             #,#No logro identificar el valor del tipo de columna para que pueda crearla
             #column_type= 0,
-            #defaults= params.defaults
+            defaults= params.defaults
         )
+    
         logger.debug(response)
     except Exception as e:
         message = f"Error de respuesta al solicitar la creación de una nueva columna en el tablero de Monday.com especificado: {e}"
         return OutputModel(
                 invocationId=invocation_id,
-                status="error",
                 response=[ResponseMessageModel(message=message)]
         )
+    
     message = ""
     if not response is None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
-        #message = f"Sucessfull create column {response['data']['move_item_to_group']['id']} Monday.com item"
+        message = f"Sucessfull create column {response['data']['create_column']['id']} Monday.com"
     else:
         logger.info("sin respuesta")
 
@@ -1836,7 +1934,7 @@ async def column_create(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
-
+'''
 
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     excel_monday = ExcelUtilsMonday()

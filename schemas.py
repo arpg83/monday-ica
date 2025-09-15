@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 class ResponseMessageModel(BaseModel):
     message: str
@@ -154,11 +154,11 @@ class FetchItemsByBoardId(BaseModel):
 class columnType(BaseModel):
     value:str 
 
-class CreateColumn(BaseModel):
+class CreateColumnParams(BaseModel):
     board_id:str
     column_title:str
-    column_type:columnType
-    defaults: Optional[object] = None
+    column_type: Optional[str] = None
+    defaults: Optional[Dict[str, Any]] = None
 
 class OpenExcel(BaseModel):
     file_name:str
@@ -168,6 +168,6 @@ class OpenExcel(BaseModel):
     continuar:bool = False
     esperar:bool = False
 
- 
+
     
    
