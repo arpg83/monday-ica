@@ -166,7 +166,7 @@ class OpenExcel(BaseModel):
     rows:int = 0
     uid:str = None
     continuar:bool = False
-    esperar:bool = False
+    esperar:bool = True
 
 
     
