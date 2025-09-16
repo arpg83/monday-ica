@@ -1937,6 +1937,9 @@ async def create_column(request: Request) -> OutputModel:
 '''
 
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
+    """
+        Proceso que se dispara en un hilo separado desde open_excel
+    """
     excel_monday = ExcelUtilsMonday()
     excel_monday.esperar = params.esperar
     excel_monday.wait_time = 3
@@ -1985,7 +1988,14 @@ async def analizar_excel(request: Request) -> OutputModel:
 #monday-open_excel: -----------COMPLETAR-----------------
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
-    """Abre un archivo excel y procesa los datos creando boards grupos e items"""
+    """Abre un archivo excel y procesa los datos creando boards grupos e items
+        file_name = ruta del archivo a ser procesado o url para descarga del archivo
+        download = si donlowad esta en true el parametro file_name se interpretara como una url y se descargara el archivo para procesarlo
+        rows = si el parametro rows es = 0 se procesaran todas las filas del documento si es otro numero se procesaran la cantidad de filas especificadas
+        uid = si se desea continuar un proceso que finalizo con error o un proceso parcial se debe proporcionar el identificador de la transaccion previa
+        continuar = si se desea continuar un proceso finalizado con error o un proceso parcial este parametro debe estar en True
+        esperar = este parametro espera un tiempo antes de mandar el siguiente request a monday para evitar errores de conexion debe estar en true para aplicar los tiempos de espera
+    """
     #------------------REVISAR--------------------------------------
     # Abre un archivo excel y procesa los datos creando boards grupos e items
     #Pendiente la generacion del mensaje de respuesta
