@@ -163,10 +163,10 @@ class CreateColumnParams(BaseModel):
 class OpenExcel(BaseModel):
     file_name:str
     download:bool = False 
-    rows:int = 0
-    uid:str = None
-    continuar:bool = False
-    esperar:bool = True
+    rows:Optional[int] = 0
+    uid:Optional[str] = None
+    continuar:Optional[bool] = False
+    esperar:Optional[bool] = True
 
 
     
