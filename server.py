@@ -1996,10 +1996,6 @@ async def open_excel(request: Request) -> OutputModel:
         continuar = si se desea continuar un proceso finalizado con error o un proceso parcial este parametro debe estar en True
         esperar = este parametro espera un tiempo antes de mandar el siguiente request a monday para evitar errores de conexion debe estar en true para aplicar los tiempos de espera
     """
-    #------------------REVISAR--------------------------------------
-    # Abre un archivo excel y procesa los datos creando boards grupos e items
-    #Pendiente la generacion del mensaje de respuesta
-    #---------------------------------------------------------------
     
     invocation_id = str(uuid4())
     
