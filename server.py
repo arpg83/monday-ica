@@ -1901,7 +1901,7 @@ def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str)
         Proceso que se dispara en un hilo separado desde open_excel
     """
     excel_monday = ExcelUtilsMonday()
-    excel_monday.esperar = bool(params.esperar)
+    excel_monday.esperar = (params.esperar == "True")
     excel_monday.wait_time = 3
     uid = invocation_id
     continuar = (params.continuar == "True")
