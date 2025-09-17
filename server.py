@@ -1843,7 +1843,8 @@ async def create_column(request: Request) -> OutputModel:
     defaults_str = ""
     if params.defaults is not None:
         defaults_json = json.dumps(params.defaults, ensure_ascii=False)
-        defaults_str = f', defaults: "{defaults_json.replace("\"", "\\\"")}"'
+        defaults_json_escaped = defaults_json.replace("\"", "\\\"")
+        defaults_str = f', defaults: "{defaults_json_escaped}"'
 
     # Construir mutación GraphQL
     mutation = f"""

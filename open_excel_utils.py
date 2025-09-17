@@ -49,6 +49,7 @@ class ExcelUtilsMonday:
         self.eliminado_grupo_inicial = False
 
     def clean_files(self):
+        """Limpia los archivos"""
         if self.proceso_completo:
             logger.info("Eliminando")
             logger.info(self.local_filename)
@@ -62,6 +63,7 @@ class ExcelUtilsMonday:
             os.rmdir(self.get_local_uid_path(self.uid))
 
     def get_local_uid_path(self,uid = None):
+        """Obtiene el path desde el uid"""
         dir_procesa = 'procesa_archivos'
         if not os.path.exists(dir_procesa):
             os.mkdir(dir_procesa)
@@ -71,6 +73,7 @@ class ExcelUtilsMonday:
         return dir_uid
 
     def get_local_fileName(self,uid = None,filename = "archivo.xlsx"):
+        """Obtiene el path del archivo local"""
         dir_uid = self.get_local_uid_path(uid)
         return f"{dir_uid}/{filename}"
 
@@ -85,6 +88,7 @@ class ExcelUtilsMonday:
         return local_filename
 
     def get_file(self,uid,filename):
+        """descarga el archivo"""
         if self.continuar and os.path.exists(self.local_filename):
             return self.local_filename
         else:
@@ -120,9 +124,9 @@ class ExcelUtilsMonday:
 
     def read_cell(self,df:pd.DataFrame,column_name,row_id):
         """Lee una celda especifica"""
-        arrCols = df.columns.values
+        arr_cols = df.columns.values
         index_col = 0
-        for index,col in enumerate(arrCols):
+        for index,col in enumerate(arr_cols):
             logger.debug(index)
             logger.debug(col)
             if col == column_name:
@@ -260,7 +264,10 @@ class ExcelUtilsMonday:
 
     def limpiar_nombre(self,texto:str):
         """Limpia el texto de un titulo"""
-        return str(texto).replace("\"","")
+        texto_con_escapeo = str(texto).replace("\\","\\\\")
+        texto_con_escapeo = str(texto_con_escapeo).replace("\"","\\\"")
+        return texto_con_escapeo
+        #return json.dumps(texto)
 
     def xls_create_board(self,monday_client:MondayClient,board_name,board_kind):
         """Crea un board"""
@@ -310,12 +317,14 @@ class ExcelUtilsMonday:
         """Crea un item"""
         text = f"Create Item: {item_name} {board_id} {group_id}"
         logger.info(text)
-
         #Crear logica de reintento
         respuesta = monday_client.items.create_item(
             item_name= self.limpiar_nombre(item_name)
             ,board_id=board_id
             ,group_id=group_id
+            ,column_values= {"checkbox":{"checked":True}}
+            ,create_labels_if_missing=True
+            #{"date":"2023-05-25"}
         )
         logger.info(respuesta)
         item_id = respuesta['data']['create_item']['id']
@@ -327,9 +336,12 @@ class ExcelUtilsMonday:
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
 
+
         respuesta = monday_client.items.create_subitem(
             subitem_name = self.limpiar_nombre(item_name)
             ,parent_item_id = item_id
+            #,column_values=  json.dumps({"date0":"2023-05-25"})
+            #,create_labels_if_missing=True
         )
         logger.info(respuesta)
         item_id = respuesta['data']['create_subitem']['id']
