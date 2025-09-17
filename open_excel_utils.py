@@ -192,10 +192,11 @@ class ExcelUtilsMonday:
         return 'undefined'
     
 
-    def process_excel_monday(self,filename, download , monday_client:MondayClient,uid = None,rows=0,continuar = False):
+    def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
         self.continuar = continuar
         #Actualmente sobrescribe el archivo si continua
+        logger.info(download)
         df = self.get_pandas(filename,download,uid)
         logger.info(self.list_columns(df))
         logger.info(uid)
@@ -234,6 +235,7 @@ class ExcelUtilsMonday:
                     logger.info(self.identify_type(outline_lvl))
                     if self.identify_type(outline_lvl) == 'board':
                         self.board_id = self.xls_create_board(monday_client,title,'public')
+                        self.xls_create_colummn(monday_client,self.board_id,"prueba","columna prueba","date","2025-03-05")
                     if self.identify_type(outline_lvl) == 'group':
                         self.group_id = self.xls_create_group(monday_client,title,self.board_id)
                     if self.identify_type(outline_lvl) == 'item':
@@ -285,7 +287,28 @@ class ExcelUtilsMonday:
         #Resetea el flag de borrado de grupo inicial
         self.eliminado_grupo_inicial = False
         return  board_id
-            
+    
+    def xls_create_colummn(self,monday_client:MondayClient,board_id,title:str,description:str,column_type:str,defaults:dict):
+        """Crea una columna en un board"""
+        defaults_json = json.dumps(defaults, ensure_ascii=False)
+        defaults_json_escaped = defaults_json.replace("\"", "\\\"")
+        defaults_str = f', defaults: "{defaults_json_escaped}"'
+        # Construir mutación GraphQL
+        mutation = """
+            mutation {
+                create_column (
+                    board_id: %s,
+                    title: "%s",
+                    description:"%s",
+                    column_type: %s
+                ) {
+                    id
+                }
+            }
+        """ % (board_id,title,description,column_type)
+        logger.info(mutation)
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
 
     def xls_create_group(self,monday_client:MondayClient,group_name,board_id):
         """Crea un grupo"""
@@ -322,8 +345,10 @@ class ExcelUtilsMonday:
             item_name= self.limpiar_nombre(item_name)
             ,board_id=board_id
             ,group_id=group_id
-            ,column_values= {"checkbox":{"checked":True}}
-            ,create_labels_if_missing=True
+            #,column_values= {"checkbox":{"checked":True}}
+            #,column_values= {"date":"2023-05-25"}
+            #,column_values=  {"date":"2025-09-17","changed_at":"2025-09-17T20:09:12.183Z"}
+            #,create_labels_if_missing=True
             #{"date":"2023-05-25"}
         )
         logger.info(respuesta)
@@ -335,8 +360,7 @@ class ExcelUtilsMonday:
         """Crea un subitem"""
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
-
-
+        
         respuesta = monday_client.items.create_subitem(
             subitem_name = self.limpiar_nombre(item_name)
             ,parent_item_id = item_id

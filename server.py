@@ -1896,64 +1896,27 @@ async def create_column(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=message)]
     )
 
-    
-    '''
-    
-    response = None
-
-    #llamada al servicio de monday
-       #Imprimo la respuesta
-    try:
-        logger.info("Ejecuta api monday")
-
-        response = monday_client.columns.create_column(
-            board_id= params.board_id,
-            column_title= params.column_title,
-            column_type= params.column_type,
-            #,#No logro identificar el valor del tipo de columna para que pueda crearla
-            #column_type= 0,
-            defaults= params.defaults
-        )
-    
-        logger.debug(response)
-    except Exception as e:
-        message = f"Error de respuesta al solicitar la creación de una nueva columna en el tablero de Monday.com especificado: {e}"
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
-    
-    message = ""
-    if not response is None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")
-        message = f"Sucessfull create column {response['data']['create_column']['id']} Monday.com"
-    else:
-        logger.info("sin respuesta")
-
-    return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-        )
-'''
-
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     """
         Proceso que se dispara en un hilo separado desde open_excel
     """
     excel_monday = ExcelUtilsMonday()
-    excel_monday.esperar = params.esperar
+    excel_monday.esperar = bool(params.esperar)
     excel_monday.wait_time = 3
     uid = invocation_id
-    if params.continuar:
+    continuar = (params.continuar == "True")
+    descargar = (params.download == "True")
+    if continuar:
+        logger.info("Entro")
         uid = params.uid
-    excel_monday.process_excel_monday(params.file_name,params.download,monday_client,uid,params.rows,params.continuar)
+        logger.info(uid)
+    excel_monday.process_excel_monday(params.file_name,descargar,monday_client,uid,params.rows,continuar)
 
 
 @app.post("/monday/analizar_excel")
 async def analizar_excel(request: Request) -> OutputModel:
-    invocation_id = str(uuid4())
-    
+    """Analiza el excel"""
+    invocation_id = str(uuid4())   
     data = await request.json()
     params = None
     try:
@@ -1969,9 +1932,11 @@ async def analizar_excel(request: Request) -> OutputModel:
         )
     excel_monday = ExcelUtilsMonday()
     uid = invocation_id
-    if params.continuar:
+    continuar = (params.continuar == "True")
+    descargar = (params.download == "True")
+    if continuar:
         uid = params.uid
-    arr_analisis = excel_monday.analizar_excel(params.file_name,params.download,uid)
+    arr_analisis = excel_monday.analizar_excel(params.file_name,descargar,uid)
 
     message = ""
     template = template_env.get_template("response_template_analiza_excel.jinja")
