@@ -1896,47 +1896,7 @@ async def create_column(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=message)]
     )
 
-    
-    '''
-    
-    response = None
-
-    #llamada al servicio de monday
-       #Imprimo la respuesta
-    try:
-        logger.info("Ejecuta api monday")
-
-        response = monday_client.columns.create_column(
-            board_id= params.board_id,
-            column_title= params.column_title,
-            column_type= params.column_type,
-            #,#No logro identificar el valor del tipo de columna para que pueda crearla
-            #column_type= 0,
-            defaults= params.defaults
-        )
-    
-        logger.debug(response)
-    except Exception as e:
-        message = f"Error de respuesta al solicitar la creación de una nueva columna en el tablero de Monday.com especificado: {e}"
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
-    
-    message = ""
-    if not response is None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")
-        message = f"Sucessfull create column {response['data']['create_column']['id']} Monday.com"
-    else:
-        logger.info("sin respuesta")
-
-    return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-        )
-'''
-
+   
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     """
         Proceso que se dispara en un hilo separado desde open_excel
@@ -1998,6 +1958,7 @@ async def open_excel(request: Request) -> OutputModel:
         esperar = este parametro espera un tiempo antes de mandar el siguiente request a monday para evitar errores de conexion debe estar en true para aplicar los tiempos de espera
     """
     
+ 
     invocation_id = str(uuid4())
     
     data = await request.json()
