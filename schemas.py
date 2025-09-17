@@ -162,11 +162,11 @@ class CreateColumnParams(BaseModel):
 
 class OpenExcel(BaseModel):
     file_name:str
-    download:bool = False 
+    download:str = "False"
     rows:Optional[int] = 0
     uid:Optional[str] = None
-    continuar:Optional[bool] = False
-    esperar:Optional[bool] = True
+    continuar:Optional[str] = "False"
+    esperar:Optional[str] = "True"
 
 
     

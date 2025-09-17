@@ -1902,18 +1902,22 @@ def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str)
         Proceso que se dispara en un hilo separado desde open_excel
     """
     excel_monday = ExcelUtilsMonday()
-    excel_monday.esperar = params.esperar
+    excel_monday.esperar = bool(params.esperar)
     excel_monday.wait_time = 3
     uid = invocation_id
-    if params.continuar:
+    continuar = (params.continuar == "True")
+    descargar = (params.download == "True")
+    if continuar:
+        logger.info("Entro")
         uid = params.uid
-    excel_monday.process_excel_monday(params.file_name,params.download,monday_client,uid,params.rows,params.continuar)
+        logger.info(uid)
+    excel_monday.process_excel_monday(params.file_name,descargar,monday_client,uid,params.rows,continuar)
 
 
 @app.post("/monday/analizar_excel")
 async def analizar_excel(request: Request) -> OutputModel:
-    invocation_id = str(uuid4())
-    
+    """Analiza el excel"""
+    invocation_id = str(uuid4())   
     data = await request.json()
     params = None
     try:
@@ -1929,9 +1933,11 @@ async def analizar_excel(request: Request) -> OutputModel:
         )
     excel_monday = ExcelUtilsMonday()
     uid = invocation_id
-    if params.continuar:
+    continuar = (params.continuar == "True")
+    descargar = (params.download == "True")
+    if continuar:
         uid = params.uid
-    arr_analisis = excel_monday.analizar_excel(params.file_name,params.download,uid)
+    arr_analisis = excel_monday.analizar_excel(params.file_name,descargar,uid)
 
     message = ""
     template = template_env.get_template("response_template_analiza_excel.jinja")
