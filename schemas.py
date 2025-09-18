@@ -43,7 +43,7 @@ class CreateDocParams(BaseModel):
     workspace_id: Optional[int] = None
     board_id: Optional[int] = None
     kind: Optional[str] = None
-    column_id: Optional[str] = None
+    column_type: Optional[str] = None
     item_id: Optional[int] = None 
 
 #-----------------------------------------------------------------------------------------------------------------  
@@ -78,6 +78,7 @@ class GetItemUpdatesParams(BaseModel):
 
 # 11 - monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
 class GetDocsParams(BaseModel):
+    object_ids: int
     limit: int = 20  
 
 # 12 - monday-get-doc-content: Retrieves the content of a specific document

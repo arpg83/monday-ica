@@ -411,10 +411,32 @@ async def create_doc(request: Request) -> OutputModel:
             if not params.kind:
                 message = "'kind' es requerido cuando se utiliza el ID del espacio de trabajo."
             location = f'location: {{workspace: {{ workspace_id: {params.workspace_id}, name: "{params.title}", kind: {params.kind} }} }}'
+            mutation = f"""
+            mutation {{
+                create_doc (
+                    {location}
+                ) {{
+                    id
+                }}
+            }}
+            """
     elif params.board_id:
-            if not params.column_id or not params.item_id:
-                message =  "'column_id' and 'item_id' are required when using board_id."
+            if not params.column_type:
+                message =  "'column_type' and 'item_id' are required when using board_id."
+            '''
             location = f'location: {{board: {{ board_id: {params.board_id}, column_id: "{params.column_id}", item_id: {params.item_id} }} }}'
+            '''
+            mutation = f"""
+            mutation {{
+                create_column(
+                    board_id: {params.board_id}, 
+                    column_type: {params.column_type}, 
+                    title: "{params.title}"
+                ) {{
+                    id
+                }}
+            }}
+            """
     else:
             message =  "Puede ingresar el ID del Espacio de trabajo o el ID del Tablero."
             logger.info(location)
@@ -422,18 +444,9 @@ async def create_doc(request: Request) -> OutputModel:
                     invocationId=invocation_id,
                     status="error",
                     response=[ResponseMessageModel(message=message)]
-            )    
-    
-    mutation = f"""
-        mutation {{
-            create_doc (
-                {location}
-            ) {{
-                id
-            }}
-        }}
-        """
-    
+            )   
+     
+    logger.info(mutation)
     response = None
     
     try:
@@ -447,7 +460,10 @@ async def create_doc(request: Request) -> OutputModel:
             )
 
     try:
-            created = (response or {}).get("data", {}).get("create_doc")
+            if params.workspace_id:
+                created = (response or {}).get("data", {}).get("create_doc")
+            if params.board_id:
+                created = (response or {}).get("data", {}).get("create_column")
             logger.info(created)
     except Exception as e:
             logger.info("error en el try de created")
@@ -878,7 +894,7 @@ async def get_docs(request: Request) -> OutputModel:
         # Query GraphQL para traer los docs
         query = f"""
         query {{
-            docs (limit: {params.limit}) {{
+            docs (object_ids: {params.object_ids}, limit: {params.limit}) {{
                 id
                 name
                 created_at
@@ -1483,20 +1499,32 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
     response = None
     
     escaped_content = params.content.replace('"', '\\"')
-    after_param = f"after_block_id: {params.after_block_id}," if params.after_block_id else ""
-    
-    mutation = f"""
+
+    if params.after_block_id:
+        mutation = f"""
         mutation {{
             create_doc_block (
                 type: {params.block_type},
-                doc_id: {params.doc_id},{after_param}
+                doc_id: {params.doc_id},
+                after_block_id: "{params.after_block_id}",
                 content: "{escaped_content}"
             ) {{
                 id
             }}
         }}
-    """
-
+        """
+    else:
+        mutation = f"""
+        mutation {{
+            create_doc_block (
+                type: {params.block_type},
+                doc_id: {params.doc_id},
+                content: "{escaped_content}"
+            ) {{
+                id
+            }}
+        }}
+        """
     logger.info("el mutation es: ")
     logger.info(mutation)
     try:
