@@ -27,10 +27,16 @@ class CreateBoardGroupParams(BaseModel):
 # 3 - monday-create-item: Creates a new item or sub-item in a Monday.com board
 class CreateItemParams(BaseModel):
     item_name: str
-    board_id: Optional[str] = None
-    group_id: Optional[str] = None
-    parent_item_id: Optional[str] = None
+    board_id: str
+    group_id: str
     column_values: Optional[dict] = None
+    create_labels_if_missing: bool = False
+
+class CreateSubitemParams(BaseModel):
+    subitem_name: str
+    parent_item_id: str = None
+    column_values: Optional[dict] = None
+    create_labels_if_missing: bool = False
 
 # 4 - monday-create-update: Creates a comment/update on a Monday.com item
 class CreateUpdateCommentParams(BaseModel):
@@ -94,7 +100,7 @@ class GetDocContentParams(BaseModel):
 
 # 14 - monday-get-item-by-id: Retrieves items by theirs IDs
 class GetItemByIdParams(BaseModel):
-    item_id: str 
+    items_id: List[str] 
 
 # 15 - monday-get-board-columns: Get the Columns of a Monday.com Board
 class GetBoardColumnsParams(BaseModel):
