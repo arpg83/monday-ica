@@ -111,7 +111,7 @@ async def create_board_group(request: Request) -> OutputModel:
     """Crea un nuevo grupo en un tablero de Monday.com
 
     Parámetros de entrada:
-        boardId: Id del tablro donde se creará el nuevo grupo.
+        boardId: Id del tablero donde se creará el nuevo grupo.
         groupName: Nombre del grupo que se creará.
 
     Retorna:
@@ -344,117 +344,6 @@ async def create_subitem(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         ) 
-
-
-    #===================================
-    
-    '''
-    try:
-        params_sub = CreateSubitemParams(**data)
-    except Exception as e:
-        message = f"Error al recuperar los parámetros, verificar que el o los IDs proporcionados existan en Monday.com: {e}"
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
-    
-    
-    if params.parent_item_id is None and params.group_id is not None:
-    #if "board_id" in data:
-        logger.info("Creacion item")
-        try:
-            response = monday_client.items.create_item(
-                board_id=params.board_id,
-                group_id=params.group_id,
-                item_name=params.item_name,
-                column_values=params.column_values,
-                create_labels_if_missing=params.create_labels_if_missing
-            )
-            logger.info(response)
-        except Exception as e:
-
-            message = f"Error al crear una tarea en Monday.com: {e}"
-
-            return OutputModel(
-                    invocationId=invocation_id,
-                    response=[ResponseMessageModel(message=message)]
-            )
-    elif params.parent_item_id is not None and params.group_id is None:
-    #elif "parent_item_id" in data:
-        logger.info("Creacion sub item")
-        try:
-            response = monday_client.items.create_subitem(
-                parent_item_id=params.parent_item_id,
-                subitem_name=params.subitem_name,
-                column_values=params.column_values,
-                create_labels_if_missing=params.create_labels_if_missing
-            )
-            logger.info(response)
-        except Exception as e:
-
-            message = f"Error al crear una subtarea en Monday.com: {e}"
-
-            return OutputModel(
-                    invocationId=invocation_id,
-                    response=[ResponseMessageModel(message=message)]
-            )
-    else:
-        message = f"Puede ingresar el ID de grupo o el ID de una tarea, pero no ambos."
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
-
-    try:
-        #hay dos tipos de response posibles el la creacion del item y el de la creacion del sub item validar que tipo de response es antes de mapear la respuesta
-        data = response["data"]
-        #id_key = "create_item" if params.parent_item_id is None else "create_subitem"
-        #item_url = f"{MONDAY_WORKSPACE_URL}/boards/{params.board_id}/pulses/{data.get(id_key).get('id')}"
-
-        if params.parent_item_id is None and params.group_id is not None:
-        #if "board_id" in data:
-            #message = f"Se creó una nueva tarea en Monday.com: {params.item_name} en el tablero cuyo ID es: : {params.board_id} and group Id: {params.group_id}."   
-            logger.info(response['data']['create_item']['id'])
-            template = template_env.get_template("response_template_item_created.jinja")
-            message = template.render(
-                item_name = params.item_name,
-                board_id = params.board_id,
-                group_id = params.group_id,
-                item_id = response['data']['create_item']['id'],
-                flag_tipo = "item",
-                Columns_values = params.column_values
-                )
-        elif params.parent_item_id is not None and params.group_id is None:
-        #elif "parent_item_id" in data:
-             #message = f"Created a new Monday.com sub item: {params.parent_item_id} en el tablero cuyo ID es: : {params.board_id}."
-            logger.info(response)
-            subitemid = response['data']['create_subitem']['id']
-            template = template_env.get_template("response_template_item_created.jinja")
-            message = template.render(
-                item_name = params.item_name,
-                parent_item_id = params.parent_item_id,
-                flag_tipo = "subitem",
-                Columns_values = params.column_values,
-                item_id = subitemid
-                )       
-        else:
-            message = f"Se creó una nueva tarea en Monday.com: {params.item_name} en el tablero cuyo ID es: : {params.board_id}."
-
-        return OutputModel(
-                    invocationId=invocation_id,
-                    response=[ResponseMessageModel(message=message)]
-        )
-    
-    except Exception as e:
-
-            message = f"No se pudo crear una tarea o subtarea en Monday.com: {e}"
-
-            return OutputModel(
-                    invocationId=invocation_id,
-                    response=[ResponseMessageModel(message=message)]
-            )
-    
-    '''
 
 # 4 - monday-create-update: Creates a comment/update on a Monday.com item
 @app.put("/monday/comment/update")
@@ -1072,7 +961,7 @@ async def get_docs(request: Request) -> OutputModel:
             )
               
         try:
-            docs = (response or {}).get("data", {}).get("docs", [])
+            docs = (response or {}).get("data", {}).get("docs", [])            
             logger.info(docs)
         except Exception as e:
             logger.info("error en el try de docs")
@@ -2077,7 +1966,75 @@ async def create_column(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=message)]
     )
 
-   
+# monday-list-workspaces: Lists all available Monday.com workspaces
+@app.post("/monday/workspaces/list")
+async def listWorkspaces(request: Request) -> OutputModel:
+    """
+    Lista todos los espacios de trabajo de Monday.com directamente (sin pasar por boards)
+    """
+    invocation_id = str(uuid4())
+
+    # Conectar con el cliente Monday
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
+        )
+
+    # Query GraphQL directa para listar workspaces
+    query = """
+    query {
+        workspaces {
+            id
+            name
+            kind
+            description
+        }
+    }
+    """
+
+    try:
+        response = monday_client.custom._query(query)
+        logger.info(response)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al solicitar la lista de workspaces de Monday.com: {e}")]
+        )
+
+    # Procesar respuesta
+    try:
+        workspaces_data = response.get("data", {}).get("workspaces", [])
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
+        )
+
+    # Construir el mensaje de salida
+    if workspaces_data:
+        lines = []
+        for w in workspaces_data:
+            lines.append(
+                f"ID del espacio de trabajo: {w.get('id')}\\n"
+                f"Nombre: {w.get('name')}\\n"
+                f"Descripción: {w.get('description')}\\n"
+                f"Tipo de espacio de trabajo: {w.get('kind')}\\n"
+                "-----\\n"
+            )
+        message = "Workspaces:\\n\
+" + "\\n".join(lines)
+    else:
+        message = "No se encontraron workspaces en Monday.com."
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
+
+  
 def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     """
         Proceso que se dispara en un hilo separado desde open_excel
