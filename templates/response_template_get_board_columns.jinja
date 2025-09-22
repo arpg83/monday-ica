@@ -1,0 +1,7 @@
+Columnas disponibles en el tablero de Monday.com:
+{% for col in columns %}
+  - ID: {{ col.id }}
+    Título: {{ col.title }}
+    Tipo: {{ col.type }}
+    Settings: {{ col.settings_str }}
+{% endfor %}

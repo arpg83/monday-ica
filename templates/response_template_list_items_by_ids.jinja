@@ -1,0 +1,6 @@
+Tareas recuperadas con los IDs especificados:
+{% for item in items %}
+  • {{ item.name }} (ID: {{ item.id }})
+    Tablero: {{ item.board.name }} (ID: {{ item.board.id }})
+    Grupo: {{ item.group.title }} (ID: {{ item.group.id }})
+{% endfor %}

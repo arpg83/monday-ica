@@ -46,11 +46,11 @@ class CreateUpdateCommentParams(BaseModel):
 # 5 - monday-create-doc: Creates a new document in Monday.com 
 class CreateDocParams(BaseModel):
     title: str
-    workspace_id: Optional[int] = None
-    board_id: Optional[int] = None
+    workspace_id: Optional[str] = None
+    board_id: Optional[str] = None
     kind: Optional[str] = None
     column_type: Optional[str] = None
-    item_id: Optional[int] = None 
+    item_id: Optional[str] = None 
 
 #-----------------------------------------------------------------------------------------------------------------  
 #-----------------------LIST--------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ class GetBoardGroupsParams(BaseModel):
 class ListItemsInGroupsParams(BaseModel):
     board_id: str
     group_ids: List[str]
-    limit: Optional[int] = 25
+    limit: Optional[str] = 25
     cursor: Optional[str] = None    
 
 # 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items

@@ -1,0 +1,11 @@
+Tareas por grupo en el tablero {{ board_id }}:
+{% for group in groups %}
+  Grupo: {{ group.title }} (ID: {{ group.id }})
+  {% if group.items_page.items %}
+    {% for item in group.items_page.items %}
+      • {{ item.name }} (ID: {{ item.id }})
+    {% endfor %}
+  {% else %}
+    No hay tareas en este grupo.
+  {% endif %}
+{% endfor %}
