@@ -373,16 +373,18 @@ async def create_update_comment(request: Request) -> OutputModel:
 
     try:
         params = CreateUpdateCommentParams(**data)
+        logger.info(params)
     except Exception as e:
         message = f"Error al recuperar los parámetros, verificar que el ID de la tarea exista en Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     response = None
     try:
         #llamada al servicio de monday
-        response = monday_client.updates.create_update(item_id=params.item_id, update_value=params.update_text)
+        response = monday_client.updates.create_update(item_id=params.item_id, update_value=params.update_value)
 
         #Imprimo la respuesta
         logger.info(response)
@@ -392,19 +394,20 @@ async def create_update_comment(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     message = ""
-    if not response is None:
+    if response is not None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")        
         message = f"Se creó una nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com: {response['data']['create_update']['id']}"
     else:
-        logger.info("sin respuesta")
-    
-    message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
+        logger.info("sin respuesta")    
+        message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
+      
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
-        )
+    )
 
 # 5 - monday-create-doc: Creates a new document in Monday.com
 @app.post("/monday/doc/create")
@@ -734,26 +737,43 @@ async def list_items_in_groups(request: Request) -> OutputModel:
     message = f"IDs de los grupos: {params.group_ids} ID del tablero: {params.board_id} Tareas: \\n" + "\\n".join(items)
     '''
 
-    if not response is None:
+    if response is not None:
+        try:
+            boards = response.get("data", {}).get("boards", [])
+            if not boards:
+                raise ValueError("No se encontraron tableros en la respuesta.")
+            groups = boards[0].get("groups", [])
+            if not groups:
+                return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message="No se encontraron grupos en el tablero especificado.")]
+                )
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            logger.error(f"Estructura inesperada en la respuesta de Monday.com: {e}")
+            return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message="Error: la respuesta no contiene grupos válidos.")]
+            )
 
-        # Extraer grupos del primer board
-        groups = response["data"]["boards"][0]["groups"]
+        # DEBUG: imprimir estructura        
+        logger.info("Contenido de 'groups':\\n" + json.dumps(groups, indent=2, ensure_ascii=False))
 
-        # Renderizar template Jinja
-        template = template_env.get_template("response_template_list_items_in_groups.jinja")  
+        # Renderizar template
+        template = template_env.get_template("response_template_list_items_in_groups.jinja")
         message = template.render(
             board_id=params.board_id,
             groups=groups
         )
-        
+
     else:
-        logger.info("sin respuesta") 
-        message=f"No se encontraron tareas en los grupos especificados." 
+        logger.info("Sin respuesta")
+        message = "No se encontraron tareas en los grupos especificados."
 
     return OutputModel(
         invocationId=invocation_id,
         response=[ResponseMessageModel(message=message)]
     )
+
 
 # 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
 @app.post("/monday/subitem_in_item/list")
@@ -1395,14 +1415,17 @@ async def update_item(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     response = None
+
     try:
         #llamada al servicio de monday
         response = monday_client.items.change_multiple_column_values(
             board_id=params.board_id, 
             item_id=params.item_id, 
-            column_values=params.column_values
-    )
+            column_values=params.column_values,
+            create_labels_if_missing=params.create_labels_if_missing
+            )
 
         #Imprimo la respuesta
         logger.info(response)

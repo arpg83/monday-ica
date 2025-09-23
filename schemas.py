@@ -41,7 +41,7 @@ class CreateSubitemParams(BaseModel):
 # 4 - monday-create-update: Creates a comment/update on a Monday.com item
 class CreateUpdateCommentParams(BaseModel):
     item_id: str
-    update_text: str
+    update_value: str
 
 # 5 - monday-create-doc: Creates a new document in Monday.com 
 class CreateDocParams(BaseModel):
@@ -69,7 +69,7 @@ class GetBoardGroupsParams(BaseModel):
 class ListItemsInGroupsParams(BaseModel):
     board_id: str
     group_ids: List[str]
-    limit: Optional[str] = 25
+    limit: Optional[int] = 25
     cursor: Optional[str] = None    
 
 # 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
@@ -118,7 +118,8 @@ class UpdateItemParams(BaseModel):
     item_id: str
     #monday_client: str
     #column_values: List[str]
-    column_values: dict     
+    column_values: dict 
+    create_labels_if_missing: bool    
 
 # 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
 class MoveItemToGroup(BaseModel):

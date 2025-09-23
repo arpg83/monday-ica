@@ -1,11 +1,21 @@
 Tareas por grupo en el tablero {{ board_id }}:
+
 {% for group in groups %}
-  Grupo: {{ group.title }} (ID: {{ group.id }})
-  {% if group.items_page.items %}
-    {% for item in group.items_page.items %}
-      • {{ item.name }} (ID: {{ item.id }})
+Grupo: {{ group.title | default('Sin nombre') }} (ID: {{ group.id | default('Sin ID') }})
+
+{% set items = [] %}
+{% if group["items_page"] is defined and group["items_page"] %}
+    {% if group["items_page"]["items"] is defined and group["items_page"]["items"] %}
+        {% set items = group["items_page"]["items"] %}
+    {% endif %}
+{% endif %}
+
+{% if items %}
+    {% for item in items %}
+    • {{ item.name | default('Sin nombre') }} (ID: {{ item.id | default('Sin ID') }})
     {% endfor %}
-  {% else %}
+{% else %}
     No hay tareas en este grupo.
-  {% endif %}
+{% endif %}
+
 {% endfor %}
