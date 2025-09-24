@@ -179,6 +179,7 @@ class OpenExcel(BaseModel):
 class ProcessExcelStatus(BaseModel):
     detener:Optional[str] = "False"
     purgar_inactivos:Optional[str] = "False"
+    purgar_procesos_antiguos:Optional[str] = "False"
     uid:Optional[str] = None
     
     

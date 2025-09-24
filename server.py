@@ -2140,11 +2140,13 @@ async def estado_proceso(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     purgar_inactivos = (str(params.purgar_inactivos).lower() == "true")
+    purgar_procesos_antiguos = (str(params.purgar_procesos_antiguos).lower() == "true")
     detener = (str(params.detener).lower() == "true")
     uid = params.uid
     
     msg_error = ""
     arr_msg = []
+    arr_proceso_antiguos = []
 
     if purgar_inactivos:
         arr = []
@@ -2156,6 +2158,22 @@ async def estado_proceso(request: Request) -> OutputModel:
         msg_error = "Se purgaron los procesos inactivos"
         arr_msg.append(msg_error)
 
+    util =  ExcelUtilsWorks()
+    
+    for item in util.listar():
+        logger.info(item)
+        encontro = False
+        for hilo in hilos:
+            if item == hilo.proceso_excel.uid:
+                encontro = True
+        if not encontro:
+            arr_proceso_antiguos.append(item)
+        if purgar_procesos_antiguos:
+            if not encontro:
+                logger.info(f"purga {item}" )
+                if util.purgar(item):
+                    arr_msg.append(f"purgo: {item}")
+        
 
     if detener:
         if not uid == None and uid != "":
@@ -2180,7 +2198,8 @@ async def estado_proceso(request: Request) -> OutputModel:
     message = template.render(
         procesos_activos = hilos,
         cant_procesos = cant_procesos,
-        msg_error = arr_msg
+        msg_error = arr_msg,
+        arr_proceso_antiguos = arr_proceso_antiguos
     )
 
     logger.info(message)
