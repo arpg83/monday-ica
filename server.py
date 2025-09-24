@@ -374,16 +374,18 @@ async def create_update_comment(request: Request) -> OutputModel:
 
     try:
         params = CreateUpdateCommentParams(**data)
+        logger.info(params)
     except Exception as e:
         message = f"Error al recuperar los parámetros, verificar que el ID de la tarea exista en Monday.com: {e}"
         return OutputModel(
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     response = None
     try:
         #llamada al servicio de monday
-        response = monday_client.updates.create_update(item_id=params.item_id, update_value=params.update_text)
+        response = monday_client.updates.create_update(item_id=params.item_id, update_value=params.update_value)
 
         #Imprimo la respuesta
         logger.info(response)
@@ -393,19 +395,20 @@ async def create_update_comment(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     message = ""
-    if not response is None:
+    if response is not None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")        
         message = f"Se creó una nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com: {response['data']['create_update']['id']}"
     else:
-        logger.info("sin respuesta")
-    
-    message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
+        logger.info("sin respuesta")    
+        message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
+      
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
-        )
+    )
 
 # 5 - monday-create-doc: Creates a new document in Monday.com
 @app.post("/monday/doc/create")
@@ -453,7 +456,7 @@ async def create_doc(request: Request) -> OutputModel:
     if params.workspace_id:
             if not params.kind:
                 message = "'kind' es requerido cuando se utiliza el ID del espacio de trabajo."
-            location = f'location: {{workspace: {{ workspace_id: {params.workspace_id}, name: "{params.title}", kind: {params.kind} }} }}'
+            location = f'location: {{workspace: {{ workspace_id: "{params.workspace_id}", name: "{params.title}", kind: "{params.kind}" }} }}'
             mutation = f"""
             mutation {{
                 create_doc (
@@ -472,8 +475,8 @@ async def create_doc(request: Request) -> OutputModel:
             mutation = f"""
             mutation {{
                 create_column(
-                    board_id: {params.board_id}, 
-                    column_type: {params.column_type}, 
+                    board_id: "{params.board_id}", 
+                    column_type: "{params.column_type}", 
                     title: "{params.title}"
                 ) {{
                     id
@@ -712,6 +715,7 @@ async def list_items_in_groups(request: Request) -> OutputModel:
         )
 
     # Procesar respuesta
+    '''
     items = []
     try:
         groups_data = response.get("data", {}).get("boards", [])[0].get("groups", [])
@@ -724,8 +728,7 @@ async def list_items_in_groups(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
-
-
+    
     if not items:
         return OutputModel(
             invocationId=invocation_id,
@@ -733,11 +736,45 @@ async def list_items_in_groups(request: Request) -> OutputModel:
         )
 
     message = f"IDs de los grupos: {params.group_ids} ID del tablero: {params.board_id} Tareas: \\n" + "\\n".join(items)
+    '''
+
+    if response is not None:
+        try:
+            boards = response.get("data", {}).get("boards", [])
+            if not boards:
+                raise ValueError("No se encontraron tableros en la respuesta.")
+            groups = boards[0].get("groups", [])
+            if not groups:
+                return OutputModel(
+                    invocationId=invocation_id,
+                    response=[ResponseMessageModel(message="No se encontraron grupos en el tablero especificado.")]
+                )
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            logger.error(f"Estructura inesperada en la respuesta de Monday.com: {e}")
+            return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message="Error: la respuesta no contiene grupos válidos.")]
+            )
+
+        # DEBUG: imprimir estructura        
+        logger.info("Contenido de 'groups':\\n" + json.dumps(groups, indent=2, ensure_ascii=False))
+
+        # Renderizar template
+        template = template_env.get_template("response_template_list_items_in_groups.jinja")
+        message = template.render(
+            board_id=params.board_id,
+            groups=groups
+        )
+
+    else:
+        logger.info("Sin respuesta")
+        message = "No se encontraron tareas en los grupos especificados."
 
     return OutputModel(
         invocationId=invocation_id,
         response=[ResponseMessageModel(message=message)]
     )
+
 
 # 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
 @app.post("/monday/subitem_in_item/list")
@@ -1198,6 +1235,8 @@ async def get_item_by_id(request: Request) -> OutputModel:
         )
     message = ""
     if not response is None:
+
+        '''
         #Genero el mensaje de salida
         #logger.debug("Procesa respuesta")
         data = dict_read_property(response,'data')
@@ -1218,8 +1257,25 @@ async def get_item_by_id(request: Request) -> OutputModel:
                 message = f"{message} {prop_id}: {dict_read_property(item_arr,prop_id)}"
 
         message = f"{message} tarea en Monday.com"
+
+        '''
+        # Extraer lista de items
+        items = response["data"]["items"]
+
+        # Normalizar para evitar errores en Jinja
+        for item in items:
+            if "board" not in item:
+                item["board"] = {"id": None, "name": None}
+            if "group" not in item:
+                item["group"] = {"id": None, "title": None}
+        
+        # Renderizar template Jinja (texto plano)
+        template = template_env.get_template("response_template_list_items_by_ids.jinja")  
+        message = template.render(items=items)       
+
     else:
         logger.debug("sin respuesta")
+        message = f"No se recuperaron tareas para los IDs indicados en Monday.com."
 
     return OutputModel(
             invocationId=invocation_id,
@@ -1284,33 +1340,43 @@ async def get_board_columns(request: Request) -> OutputModel:
     #Imprime la respuesta
     logger.info(response)
 
-
-    for board in response.get("data", {}).get("boards", []):
-            for column in board["columns"]:
-                settings_str = column.pop("settings_str", None)
-                if settings_str:
-                    if isinstance(settings_str, str):
-                        try:
-                            settings_obj = json.loads(settings_str)
-                            if settings_obj.get("labels"):
-                                column["available_labels"] = settings_obj["labels"]
-                        except json.JSONDecodeError:
-                            pass
-            
+    '''
+        for board in response.get("data", {}).get("boards", []):
+                for column in board["columns"]:
+                    settings_str = column.pop("settings_str", None)
+                    if settings_str:
+                        if isinstance(settings_str, str):
+                            try:
+                                settings_obj = json.loads(settings_str)
+                                if settings_obj.get("labels"):
+                                    column["available_labels"] = settings_obj["labels"]
+                            except json.JSONDecodeError:
+                                pass
     message = ""
+    
+    '''          
+       
     if not response is None:
+
+       
         #Genera el mensaje de salida
         logger.info("Procesa respuesta")        
-       
-        message = f"Columnas disponibles en el tablero de Monday.com: \n %s" % (response['data']) 
+        
+        # message = f"Columnas disponibles en el tablero de Monday.com: \n %s" % (response['data']) 
+
+        columns = response["data"]["boards"][0]["columns"]
+
+        template = template_env.get_template("response_template_get_board_columns.jinja")
+        message = template.render(columns=columns)
 
     else:
         logger.info("sin respuesta")
+        message = f"No se recuperaron columnas para el tablero indicado en Monday.com."
 
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
-        ) 
+    ) 
 
 #______________________________________________________________________________________________________________
 #___________________________ UPDATE____________________________________________________________________________
@@ -1350,14 +1416,17 @@ async def update_item(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
+    
     response = None
+
     try:
         #llamada al servicio de monday
         response = monday_client.items.change_multiple_column_values(
             board_id=params.board_id, 
             item_id=params.item_id, 
-            column_values=params.column_values
-    )
+            column_values=params.column_values,
+            create_labels_if_missing=params.create_labels_if_missing
+            )
 
         #Imprimo la respuesta
         logger.info(response)
@@ -2209,7 +2278,6 @@ async def open_excel(request: Request) -> OutputModel:
         invocationId=invocation_id,
         response=[ResponseMessageModel(message=message)]
     )
-
 
 
 if __name__ == "__main__":
