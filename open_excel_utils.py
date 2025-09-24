@@ -7,6 +7,7 @@ import os
 import time
 import shutil
 import json
+from threading import Thread
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,8 @@ class ExcelUtilsMonday:
     error = False
     message = ""
     continuar:bool = False
+    detener = False
+    procesando = True
 
     def __init__(self):
         self.download = False
@@ -202,6 +205,7 @@ class ExcelUtilsMonday:
         logger.info(uid)
         cant_total_filas = len(df.index)
         cantidad_a_procesar = 0
+        self.procesando = True
         if rows == 0:
             cantidad_a_procesar = cant_total_filas
         if continuar:
@@ -250,10 +254,13 @@ class ExcelUtilsMonday:
                         self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.esperar:
                         time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
+                    if self.detener:
+                        break
         except Exception as e:
             self.error = True
             self.message = e
             logger.error(e)
+            self.procesando = False
         logger.info("Fin de proceso")
         logger.info(self.board_id)
         logger.info(self.group_id)
@@ -263,6 +270,7 @@ class ExcelUtilsMonday:
             self.proceso_completo = True
         self.salvar_estado(self.error)
         self.clean_files()
+        self.procesando = False
 
     def limpiar_nombre(self,texto:str):
         """Limpia el texto de un titulo"""
@@ -403,3 +411,10 @@ class ExcelUtilsMonday:
         self.proceso_completo = True
         self.clean_files()
         return arr_analisis_items
+
+class Hilo():
+    hilo:Thread
+    proceso_excel:ExcelUtilsMonday
+
+    def __init__(self):
+        pass

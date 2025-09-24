@@ -175,6 +175,10 @@ class OpenExcel(BaseModel):
     continuar:Optional[str] = "False"
     esperar:Optional[str] = "True"
 
-
+class ProcessExcelStatus(BaseModel):
+    detener:Optional[str] = "False"
+    purgar_inactivos:Optional[str] = "False"
+    uid:Optional[str] = None
+    
     
    

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams,ProcessExcelStatus
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -27,6 +27,7 @@ import json
 from threading import Thread
 
 load_dotenv()
+hilos = []
 
 logging.basicConfig(
 
@@ -2035,11 +2036,12 @@ async def listWorkspaces(request: Request) -> OutputModel:
     )
 
   
-def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str):
+def process_excel(hilo:Hilo,params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     """
         Proceso que se dispara en un hilo separado desde open_excel
     """
     excel_monday = ExcelUtilsMonday()
+    hilo.proceso_excel = excel_monday
     excel_monday.esperar = (params.esperar == "True")
     excel_monday.wait_time = 3
     uid = invocation_id
@@ -2051,6 +2053,73 @@ def process_excel(params:OpenExcel,monday_client:MondayClient,invocation_id:str)
         logger.info(uid)
     excel_monday.process_excel_monday(params.file_name,descargar,monday_client,uid,params.rows,continuar)
 
+@app.post("/monday/estado_proceso_excel")
+async def estado_proceso(request: Request) -> OutputModel:
+    """Devuelve el estado del procesamiento del excel"""
+    invocation_id = str(uuid4())   
+    data = await request.json()
+    params = None
+    try:
+        #parseo los datos del request
+        logger.info("Parse input")
+        params = ProcessExcelStatus(**data)
+    except Exception as e:
+        message = f"Parse error on imput request message Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                status="error",
+                response=[ResponseMessageModel(message=message)]
+        )
+    purgar_inactivos = (str(params.purgar_inactivos).lower() == "true")
+    detener = (str(params.detener).lower() == "true")
+    uid = params.uid
+    
+    msg_error = ""
+    arr_msg = []
+
+    if purgar_inactivos:
+        arr = []
+        for hilo in hilos:
+            if not hilo.proceso_excel.procesando:
+                arr.append(hilo)
+        for hilo in arr:
+            hilos.remove(hilo)
+        msg_error = "Se purgaron los procesos inactivos"
+        arr_msg.append(msg_error)
+
+
+    if detener:
+        if not uid == None and uid != "":
+            encontro = False
+            for hilo in hilos:
+                if hilo.proceso_excel.uid == uid:
+                    hilo.proceso_excel.detener = True
+                    msg_error = f"Deteniendo proceso {uid}"
+                    arr_msg.append(msg_error)
+                    encontro = True
+            if not encontro:
+                msg_error = f"No se encontro el proceso {uid}"
+                arr_msg.append(msg_error)
+        else:
+            msg_error = "Debe proporcionarse un uid para poder detener un proceso"
+            arr_msg.append(msg_error)
+
+    message = ""
+    
+    template = template_env.get_template("response_template_estado_proceso_excel.jinja")
+    cant_procesos = len(hilos)
+    message = template.render(
+        procesos_activos = hilos,
+        cant_procesos = cant_procesos,
+        msg_error = arr_msg
+    )
+
+    logger.info(message)
+    return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+    )
 
 @app.post("/monday/analizar_excel")
 async def analizar_excel(request: Request) -> OutputModel:
@@ -2120,9 +2189,10 @@ async def open_excel(request: Request) -> OutputModel:
         )
     try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        
-        thread = Thread(target=process_excel,args=(params,monday_client,invocation_id))
-        thread.start()
+        hilo = Hilo()
+        hilo.hilo = Thread(target=process_excel,args=(hilo,params,monday_client,invocation_id))
+        hilo.hilo.start()
+        hilos.append(hilo)
 
     except requests.RequestException as e:
         return OutputModel(
