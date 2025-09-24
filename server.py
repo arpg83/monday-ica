@@ -2186,7 +2186,7 @@ async def estado_proceso(request: Request) -> OutputModel:
     logger.info(message)
     return OutputModel(
             invocationId=invocation_id,
-            status="error",
+            status="ok",
             response=[ResponseMessageModel(message=message)]
     )
 
