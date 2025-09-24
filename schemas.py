@@ -116,9 +116,7 @@ class GetBoardColumnsParams(BaseModel):
 class UpdateItemParams(BaseModel):
     board_id: str
     item_id: str
-    #monday_client: str
-    #column_values: List[str]
-    column_values: dict 
+    column_values: dict[str,Any] 
     create_labels_if_missing: bool    
 
 # 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
