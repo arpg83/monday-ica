@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams,ProcessExcelStatus
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams,ProcessExcelStatus, DeleteColumnByIdParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -1828,6 +1828,75 @@ async def delete_item_by_id(request: Request) -> OutputModel:
         )
 
 
+# - monday-delete-column: Deletes a Monday.com column
+@app.delete("/monday/column/delete")
+async def delete_column_by_id(request: Request) -> OutputModel:
+    """
+    Eliminar una columna de un tablero de Monday.com 
+
+       Parámetros de entrada: 
+            board_id: ID del tablero donde se encuentra el grupo a eliminar.                 
+            column_id: ID de la columna que será eliminada de Monday.com .
+
+    """
+    invocation_id = str(uuid4())
+    monday_client = None
+    try: 
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id,
+        status="error",        
+        response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
+    )
+
+    data = await request.json()
+    params = None
+    try:
+        params = DeleteColumnByIdParams(**data)
+    except Exception as e:
+            message = f"Error al recuperar los parámetros, verifique que el ID del tablero y el ID de la columna proporcionados, existan en Monday.com: {e}"
+            return OutputModel(
+                    invocationId=invocation_id,
+                    status="error",
+                    response=[ResponseMessageModel(message=message)]
+            )
+    response = None
+ 
+    mutation = f"""
+        mutation {{
+            delete_column (
+                board_id: "{params.board_id}",
+                column_id: "{params.column_id}"                
+            ) {{
+                id
+            }}
+        }}
+        """
+   
+    logger.info("el mutation es: ")
+    logger.info(mutation)
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except requests.RequestException as e:
+       logger.info(e)
+       return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la eliminación de la columna de Monday.com: {e}")]               
+        )
+
+    if not response is None:
+        logger.info("Procesa respuesta")
+        message = f"ID de la columna eliminada en Monday.com:  {response['data']['delete_column']['id']}"
+    else:
+        logger.info("sin respuesta")
+    
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
 #______________________________________________________________________________________________________________
 #___________________________ OTHERS____________________________________________________________________________
 #______________________________________________________________________________________________________________
@@ -1869,7 +1938,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
         board = monday_client.boards.fetch_items_by_board_id(
             board_ids= params.board_id
         )
-        logger.debug(board)
+        logger.info(board)
     except requests.RequestException as e:
         return OutputModel(
         invocationId=invocation_id,        

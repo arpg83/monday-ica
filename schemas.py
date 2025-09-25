@@ -149,6 +149,11 @@ class DeleteGroupByIdParams(BaseModel):
 class DeleteItemByIdParams(BaseModel):
     item_id:str
 
+# - monday-delete-column: Deletes a Monday.com column
+class DeleteColumnByIdParams(BaseModel):
+    board_id:  str
+    column_id: str
+
 #----------------------------------------------------------------------------------------------------------------- 
 #-----------------------OTHERS------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------- 
