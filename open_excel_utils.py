@@ -63,8 +63,11 @@ class ExcelUtilsMonday:
     item_id_l3 = None
     item_id_l4 = None
     item_id_l5 = None
+    sub_board_id = None
     id_column_fecha_inicio = None
     id_column_fecha_fin = None
+    sub_board_id_column_fecha_inicio = None
+    sub_board_id_column_fecha_fin = None
     pos = 0
     wait_time = 1
     esperar = True
@@ -74,6 +77,7 @@ class ExcelUtilsMonday:
     continuar:bool = False
     detener = False
     procesando = True
+    sub_board_columns_creadas = False
 
     def __init__(self):
         self.download = False
@@ -294,20 +298,27 @@ class ExcelUtilsMonday:
                         self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date",fecha_inicio)
                     if self.identify_type(outline_lvl) == 'group':
                         self.group_id = self.xls_create_group(monday_client,title,self.board_id)
-                    if self.identify_type(outline_lvl) == 'item':                        
+                    if self.identify_type(outline_lvl) == 'item':
                         self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
+                        self.sub_board_columns_creadas = False
                     if self.identify_type(outline_lvl) == 'subiteml1':
                         self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,"date0",fecha_inicio)
-                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,self.id_column_fecha_fin,fecha_fin)
+                        if not self.sub_board_columns_creadas:
+                            self.sub_board_id = self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
+                            self.sub_board_id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date",fecha_inicio)
+                            self.sub_board_id_column_fecha_fin = self.xls_create_colummn(monday_client,self.sub_board_id,"Fin","Fecha fin","date",fecha_inicio)
+                            self.sub_board_columns_creadas = True
+                        self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
+                        self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
+                        self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
                     if self.identify_type(outline_lvl) == 'subiteml2':
-                        self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                        self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                     if self.identify_type(outline_lvl) == 'subiteml3':
-                        self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                        self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                     if self.identify_type(outline_lvl) == 'subiteml4':
-                        self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                        self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                     if self.esperar:
                         time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
                     if self.detener:
@@ -449,6 +460,34 @@ class ExcelUtilsMonday:
         logger.info(mutation)
         response = monday_client.custom._query(mutation)
         logger.info(response)
+
+    def get_sub_board_id_sub_item(self,monday_client:MondayClient,item_id:str):
+        """Asigna un valor a una columna"""
+        mutation = """
+        query {
+            items (ids: %s) {
+                subitems {
+                id
+                board{
+                    id
+                }
+                column_values {
+                    value
+                    text
+                }
+                }
+            }
+        }
+        """ % (item_id)
+        logger.info(mutation)
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+        sub_board_id = ""
+        for item in response["data"]["items"]:
+            for subitem in item["subitems"]:
+                sub_board_id = subitem["board"]["id"]
+                logger.info(sub_board_id)
+        return sub_board_id
 
     def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id,fecha_inicio:str):
         """Crea un subitem"""
