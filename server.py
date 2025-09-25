@@ -25,6 +25,8 @@ from response_classes import *
 
 import json
 from threading import Thread
+# Clase para usar en el template para listar usuarios
+from usuarios_response import Usuario 
 
 load_dotenv()
 
@@ -1148,7 +1150,8 @@ async def get_doc_content(request: Request) -> OutputModel:
 
 # 13 - monday-list-users: Lists all available Monday.com users
 @app.get("/monday/users/list")
-async def listUsers(request: Request) -> OutputModel:
+#async def listUsers(request: Request) -> OutputModel:
+async def listUsers() -> OutputModel:
     """
     Lista los usuarios de Monday.com
 
@@ -1168,13 +1171,36 @@ async def listUsers(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
     )    
       
+   # response = monday_client.users.fetch_users()
+   # users = response["data"]["users"]
+   # users_list = "\n".join(
+   #     [f"- {user['name']} (ID: {user['id']})" for user in users]
+   # )
+
+   # message = "Usuarios disponibles en Monday.com: \n %s" % (users_list) 
     response = monday_client.users.fetch_users()
     users = response["data"]["users"]
-    users_list = "\n".join(
-        [f"- {user['name']} (ID: {user['id']})" for user in users]
-    )
+    usuarios = []
+    for user in users:
+        usuario = Usuario()
+        usuario.id = user["id"]
+        usuario.name = user["name"]
+        usuario.email = user["email"]
+        usuario.enabled = user["enabled"]
+        usuario.teams = user["teams"]
+        usuarios.append(usuario)
 
-    message = "Usuarios disponibles en Monday.com: \n %s" % (users_list) 
+# Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
+
+# Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_users.jinja')
+
+    message = template.render(users=usuarios,cant_users=int(len(usuarios)))
+
+# Imprimir el mensaje resultante
+    logger.info(message)
 
     return OutputModel(
             invocationId=invocation_id,

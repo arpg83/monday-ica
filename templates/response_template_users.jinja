@@ -1,4 +1,18 @@
-Found {{ count }} user(s):
-{% for user in users %}
-  - {{ user.name }} (Email: {{ user.email or 'N/A' }}, Username: {{ user.user_name or 'N/A' }})
+# Found {{ count }} user(s):
+# {% for user in users %}
+#  - {{ user.name }} (Email: {{ user.email or 'N/A' }}, Username: {{ user.user_name or 'N/A' }})
+# {% endfor %}
+
+{% if cant_users > 0 %}
+Usuarios disponibles en Monday.com:
+{% for usuario in users %}
+   Id: {{ usuario.id }}
+   Name: {{ usuario.name }}
+   Email: {{ usuario.email }}
+   Enabled: {{ usuario.enabled }}
+   Teams: {{ usuario.teams }}
 {% endfor %}
+{% else %}
+No se recuperaron usuarios en Monday.com
+{% endif %}
+
