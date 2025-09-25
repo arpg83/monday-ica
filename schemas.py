@@ -49,7 +49,7 @@ class CreateDocParams(BaseModel):
     workspace_id: Optional[str] = None
     board_id: Optional[str] = None
     kind: Optional[str] = None
-    column_type: Optional[str] = None
+    column_id: Optional[str] = None
     item_id: Optional[str] = None 
 
 #-----------------------------------------------------------------------------------------------------------------  
