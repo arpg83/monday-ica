@@ -1,0 +1,9 @@
+Procesos activos:
+cantidad de procesos: {{ cant_procesos }}
+{%for hilo in procesos_activos %}
+    uid: {{ hilo.proceso_excel.uid }}
+    Estado procesando: {{ hilo.proceso_excel.procesando }}   
+{% endfor %}directorios de procesos:{%for uid in arr_proceso_antiguos %}
+    {{uid}}{% endfor %}{%if msg_error != None and msg_error != ""%}{%for msg in msg_error %}
+    {{ msg }}{% endfor %}
+{% endif %}

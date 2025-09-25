@@ -7,6 +7,8 @@ import os
 import time
 import shutil
 import json
+from threading import Thread
+from datetime import datetime,timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,31 @@ class AnalisisItem():
         """Genera linea de log"""
         return f"item: {self.item_name} max_outline: {self.max_outline} inicio:{self.row_inicio +1} fin:{self.row_fin +1}"
 
+
+class ExcelUtilsWorks:
+    """Utilidades para el directorio de procesamiento"""
+    directorio:str = 'procesa_archivos'
+
+    def __init__(self):
+        pass
+    def listar(self):
+        """lista los uid del directorio de procesamiento"""
+        arr = []
+        arr = os.listdir(self.directorio)
+        return arr
+    
+    def purgar(self,uid):
+        """Purga un uid del directorio de procesamiento"""
+        excel_monday = ExcelUtilsMonday()
+        excel_monday.uid = uid
+        excel_monday.read_estado()
+        logger.info("intenta purgar:")
+        logger.info("intenta clean")
+        excel_monday.proceso_completo = True
+        excel_monday.clean_files()
+        return True
+
+
 class ExcelUtilsMonday:
     local_filename = ""
     uid = ""
@@ -36,6 +63,8 @@ class ExcelUtilsMonday:
     item_id_l3 = None
     item_id_l4 = None
     item_id_l5 = None
+    id_column_fecha_inicio = None
+    id_column_fecha_fin = None
     pos = 0
     wait_time = 1
     esperar = True
@@ -43,6 +72,8 @@ class ExcelUtilsMonday:
     error = False
     message = ""
     continuar:bool = False
+    detener = False
+    procesando = True
 
     def __init__(self):
         self.download = False
@@ -191,6 +222,22 @@ class ExcelUtilsMonday:
 #            return 'subiteml4'#column
         return 'undefined'
     
+    def parse_date(self,fecha:str):
+        format_string = "%B %d, %Y %I:%M %p"
+        logger.info(fecha)
+        logger.info(format_string)
+        try:
+            dt_fecha = datetime.strptime(f"{fecha}",format_string)
+            time_delta = timedelta(hours=3)
+            dt_fecha = dt_fecha + time_delta
+            resp_fecha = str(dt_fecha)
+            logger.info(resp_fecha)
+            return resp_fecha
+        except Exception as e:
+            logger.error(e)
+            logger.info(f"no se pudo parsear la fecha {fecha}")
+            return None
+    
 
     def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
@@ -202,6 +249,7 @@ class ExcelUtilsMonday:
         logger.info(uid)
         cant_total_filas = len(df.index)
         cantidad_a_procesar = 0
+        self.procesando = True
         if rows == 0:
             cantidad_a_procesar = cant_total_filas
         if continuar:
@@ -227,6 +275,13 @@ class ExcelUtilsMonday:
                 if not continuar or (continuar and i > self.pos):
                     self.pos = i
                     title = self.read_cell(df,"Name",i)
+                    dt_inicio = self.read_cell(df,"Start",i)
+                    dt_fin = self.read_cell(df,"Finish",i)
+                    #March 5, 2025 9:00 AM
+                    fecha_inicio = self.parse_date(dt_inicio)
+                    fecha_fin = self.parse_date(dt_fin)
+                    #fecha_inicio = "2025-03-05"
+                    #fecha_fin = "2025-03-05"
                     outline_lvl = self.read_cell(df,"Outline Level",i)
                     message = f"Row: {i}"
                     logger.info(message)
@@ -235,13 +290,18 @@ class ExcelUtilsMonday:
                     logger.info(self.identify_type(outline_lvl))
                     if self.identify_type(outline_lvl) == 'board':
                         self.board_id = self.xls_create_board(monday_client,title,'public')
-                        self.xls_create_colummn(monday_client,self.board_id,"prueba","columna prueba","date","2025-03-05")
+                        self.id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.board_id,"Inicio","Fecha inicio","date",fecha_inicio)
+                        self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date",fecha_inicio)
                     if self.identify_type(outline_lvl) == 'group':
                         self.group_id = self.xls_create_group(monday_client,title,self.board_id)
-                    if self.identify_type(outline_lvl) == 'item':
-                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id)
+                    if self.identify_type(outline_lvl) == 'item':                        
+                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
+                        self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
+                        self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
                     if self.identify_type(outline_lvl) == 'subiteml1':
-                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,"date0",fecha_inicio)
+                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,self.id_column_fecha_fin,fecha_fin)
                     if self.identify_type(outline_lvl) == 'subiteml2':
                         self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.identify_type(outline_lvl) == 'subiteml3':
@@ -250,10 +310,13 @@ class ExcelUtilsMonday:
                         self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.esperar:
                         time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
+                    if self.detener:
+                        break
         except Exception as e:
             self.error = True
             self.message = e
             logger.error(e)
+            self.procesando = False
         logger.info("Fin de proceso")
         logger.info(self.board_id)
         logger.info(self.group_id)
@@ -263,6 +326,7 @@ class ExcelUtilsMonday:
             self.proceso_completo = True
         self.salvar_estado(self.error)
         self.clean_files()
+        self.procesando = False
 
     def limpiar_nombre(self,texto:str):
         """Limpia el texto de un titulo"""
@@ -309,6 +373,9 @@ class ExcelUtilsMonday:
         logger.info(mutation)
         response = monday_client.custom._query(mutation)
         logger.info(response)
+        id_col = response["data"]["create_column"]["id"]
+        logger.info(id_col)
+        return id_col
 
     def xls_create_group(self,monday_client:MondayClient,group_name,board_id):
         """Crea un grupo"""
@@ -334,39 +401,61 @@ class ExcelUtilsMonday:
             self.eliminado_grupo_inicial = True
 
         return  group_id
+    
+    def generate_column_values_fechas(self,fecha_inicio:str,fecha_fin:str):
+        """Genera el parametro column values para crear items y subitems"""
+        dict_column_values = ({self.id_column_fecha_inicio:fecha_inicio},{self.id_column_fecha_fin:fecha_fin})
+        json_column_values = json.dumps(json.dumps(dict_column_values))
+        #json_column_values = json_column_values.replace("[","")
+        #json_column_values = json_column_values.replace("]","")
+        logger.info(json_column_values)
+        return json_column_values
 
 
-    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id):
+    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id,fecha_inicio:str,fecha_fin:str):
         """Crea un item"""
         text = f"Create Item: {item_name} {board_id} {group_id}"
+        #column_values = self.generate_column_values_fechas(fecha_inicio,fecha_fin)
         logger.info(text)
         #Crear logica de reintento
-        respuesta = monday_client.items.create_item(
-            item_name= self.limpiar_nombre(item_name)
-            ,board_id=board_id
-            ,group_id=group_id
-            #,column_values= {"checkbox":{"checked":True}}
-            #,column_values= {"date":"2023-05-25"}
-            #,column_values=  {"date":"2025-09-17","changed_at":"2025-09-17T20:09:12.183Z"}
-            #,create_labels_if_missing=True
-            #{"date":"2023-05-25"}
-        )
+        respuesta = monday_client.items.create_item( item_name= self.limpiar_nombre(item_name) ,board_id=board_id ,group_id=group_id)
+        #item_name_limpio = self.limpiar_nombre(item_name)
+        #mutation = """mutation {
+        #create_item(
+        #    board_id: %s, 
+        #    group_id: "%s", 
+        #    item_name: "%s", 
+        #    column_values: %s
+        #    ) {
+        #    id
+        #}
+        #}""" % (board_id,group_id, item_name_limpio ,column_values)
+        #logger.info(mutation)
+        #respuesta = monday_client.custom._query(mutation)
         logger.info(respuesta)
         item_id = respuesta['data']['create_item']['id']
         logger.info(item_id)
         return item_id
+    
+    def xls_asign_value_to_column(self,monday_client:MondayClient,board_id:str,item_id:str,column_id:str,column_value:str):
+        """Asigna un valor a una columna"""
+        mutation = """
+        mutation {
+            change_simple_column_value (board_id: %s, item_id: %s, column_id: "%s", value: "%s") {
+                id
+            }
+        }
+        """ % (board_id,item_id,column_id,column_value)
+        logger.info(mutation)
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
 
-    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id):
+    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id,fecha_inicio:str):
         """Crea un subitem"""
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
-        
-        respuesta = monday_client.items.create_subitem(
-            subitem_name = self.limpiar_nombre(item_name)
-            ,parent_item_id = item_id
-            #,column_values=  json.dumps({"date0":"2023-05-25"})
-            #,create_labels_if_missing=True
-        )
+        subitem_name_limpio = self.limpiar_nombre(item_name)
+        respuesta = monday_client.items.create_subitem(subitem_name = subitem_name_limpio,parent_item_id = item_id)
         logger.info(respuesta)
         item_id = respuesta['data']['create_subitem']['id']
         logger.info(item_id)
@@ -403,3 +492,10 @@ class ExcelUtilsMonday:
         self.proceso_completo = True
         self.clean_files()
         return arr_analisis_items
+
+class Hilo():
+    hilo:Thread
+    proceso_excel:ExcelUtilsMonday
+
+    def __init__(self):
+        pass

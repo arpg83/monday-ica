@@ -49,7 +49,7 @@ class CreateDocParams(BaseModel):
     workspace_id: Optional[str] = None
     board_id: Optional[str] = None
     kind: Optional[str] = None
-    column_type: Optional[str] = None
+    column_id: Optional[str] = None
     item_id: Optional[str] = None 
 
 #-----------------------------------------------------------------------------------------------------------------  
@@ -116,9 +116,7 @@ class GetBoardColumnsParams(BaseModel):
 class UpdateItemParams(BaseModel):
     board_id: str
     item_id: str
-    #monday_client: str
-    #column_values: List[str]
-    column_values: dict 
+    column_values: dict[str,Any] 
     create_labels_if_missing: bool    
 
 # 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
@@ -176,6 +174,11 @@ class OpenExcel(BaseModel):
     continuar:Optional[str] = "False"
     esperar:Optional[str] = "True"
 
-
+class ProcessExcelStatus(BaseModel):
+    detener:Optional[str] = "False"
+    purgar_inactivos:Optional[str] = "False"
+    purgar_procesos_antiguos:Optional[str] = "False"
+    uid:Optional[str] = None
+    
     
    
