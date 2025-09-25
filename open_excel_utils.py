@@ -8,7 +8,7 @@ import time
 import shutil
 import json
 from threading import Thread
-from datetime import datetime
+from datetime import datetime,timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +227,10 @@ class ExcelUtilsMonday:
         logger.info(fecha)
         logger.info(format_string)
         try:
-            resp_fecha = str(datetime.strptime(f"{fecha}",format_string))
+            dt_fecha = datetime.strptime(f"{fecha}",format_string)
+            time_delta = timedelta(hours=3)
+            dt_fecha = dt_fecha + time_delta
+            resp_fecha = str(dt_fecha)
             logger.info(resp_fecha)
             return resp_fecha
         except Exception as e:
@@ -291,12 +294,14 @@ class ExcelUtilsMonday:
                         self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date",fecha_inicio)
                     if self.identify_type(outline_lvl) == 'group':
                         self.group_id = self.xls_create_group(monday_client,title,self.board_id)
-                    if self.identify_type(outline_lvl) == 'item':
-                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id)
+                    if self.identify_type(outline_lvl) == 'item':                        
+                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
                     if self.identify_type(outline_lvl) == 'subiteml1':
-                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
+                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,"date0",fecha_inicio)
+                        #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l2,self.id_column_fecha_fin,fecha_fin)
                     if self.identify_type(outline_lvl) == 'subiteml2':
                         self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1)
                     if self.identify_type(outline_lvl) == 'subiteml3':
@@ -396,23 +401,37 @@ class ExcelUtilsMonday:
             self.eliminado_grupo_inicial = True
 
         return  group_id
+    
+    def generate_column_values_fechas(self,fecha_inicio:str,fecha_fin:str):
+        """Genera el parametro column values para crear items y subitems"""
+        dict_column_values = ({self.id_column_fecha_inicio:fecha_inicio},{self.id_column_fecha_fin:fecha_fin})
+        json_column_values = json.dumps(json.dumps(dict_column_values))
+        #json_column_values = json_column_values.replace("[","")
+        #json_column_values = json_column_values.replace("]","")
+        logger.info(json_column_values)
+        return json_column_values
 
 
-    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id):
+    def xls_create_item(self,monday_client:MondayClient,item_name,board_id,group_id,fecha_inicio:str,fecha_fin:str):
         """Crea un item"""
         text = f"Create Item: {item_name} {board_id} {group_id}"
+        #column_values = self.generate_column_values_fechas(fecha_inicio,fecha_fin)
         logger.info(text)
         #Crear logica de reintento
-        respuesta = monday_client.items.create_item(
-            item_name= self.limpiar_nombre(item_name)
-            ,board_id=board_id
-            ,group_id=group_id
-            #,column_values= {"checkbox":{"checked":True}}
-            #,column_values= {"date":"2023-05-25"}
-            #,column_values=  {"date":"2025-09-17","changed_at":"2025-09-17T20:09:12.183Z"}
-            #,create_labels_if_missing=True
-            #{"date":"2023-05-25"}
-        )
+        respuesta = monday_client.items.create_item( item_name= self.limpiar_nombre(item_name) ,board_id=board_id ,group_id=group_id)
+        #item_name_limpio = self.limpiar_nombre(item_name)
+        #mutation = """mutation {
+        #create_item(
+        #    board_id: %s, 
+        #    group_id: "%s", 
+        #    item_name: "%s", 
+        #    column_values: %s
+        #    ) {
+        #    id
+        #}
+        #}""" % (board_id,group_id, item_name_limpio ,column_values)
+        #logger.info(mutation)
+        #respuesta = monday_client.custom._query(mutation)
         logger.info(respuesta)
         item_id = respuesta['data']['create_item']['id']
         logger.info(item_id)
@@ -431,17 +450,12 @@ class ExcelUtilsMonday:
         response = monday_client.custom._query(mutation)
         logger.info(response)
 
-    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id):
+    def xls_create_sub_item(self,monday_client:MondayClient,item_name,item_id,fecha_inicio:str):
         """Crea un subitem"""
         text = f"Create sub item: {item_name} {item_id}"
         logger.info(text)
-        
-        respuesta = monday_client.items.create_subitem(
-            subitem_name = self.limpiar_nombre(item_name)
-            ,parent_item_id = item_id
-            #,column_values=  json.dumps({"date0":"2023-05-25"})
-            #,create_labels_if_missing=True
-        )
+        subitem_name_limpio = self.limpiar_nombre(item_name)
+        respuesta = monday_client.items.create_subitem(subitem_name = subitem_name_limpio,parent_item_id = item_id)
         logger.info(respuesta)
         item_id = respuesta['data']['create_subitem']['id']
         logger.info(item_id)
