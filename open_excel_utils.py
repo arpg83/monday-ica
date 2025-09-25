@@ -222,6 +222,19 @@ class ExcelUtilsMonday:
 #            return 'subiteml4'#column
         return 'undefined'
     
+    def parse_date(self,fecha:str):
+        format_string = "%B %d, %Y %I:%M %p"
+        logger.info(fecha)
+        logger.info(format_string)
+        try:
+            resp_fecha = str(datetime.strptime(f"{fecha}",format_string))
+            logger.info(resp_fecha)
+            return resp_fecha
+        except Exception as e:
+            logger.error(e)
+            logger.info(f"no se pudo parsear la fecha {fecha}")
+            return None
+    
 
     def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
@@ -261,15 +274,9 @@ class ExcelUtilsMonday:
                     title = self.read_cell(df,"Name",i)
                     dt_inicio = self.read_cell(df,"Start",i)
                     dt_fin = self.read_cell(df,"Finish",i)
-                    logger.info(dt_inicio)
-                    str_date = str(dt_inicio)
-                    logger.info(f"\"{str_date}\"")
                     #March 5, 2025 9:00 AM
-                    format_string = "%B %d, %Y %I:%M %p"
-                    fecha_inicio = str(datetime.strptime(f"{str_date}",format_string))
-                    str_date = str(dt_fin)
-                    fecha_fin = str(datetime.strptime(f"{str_date}",format_string))
-                    logger.info(fecha_inicio)
+                    fecha_inicio = self.parse_date(dt_inicio)
+                    fecha_fin = self.parse_date(dt_fin)
                     #fecha_inicio = "2025-03-05"
                     #fecha_fin = "2025-03-05"
                     outline_lvl = self.read_cell(df,"Outline Level",i)
