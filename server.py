@@ -1648,7 +1648,8 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
         )
     response = None
     
-    escaped_content = params.content.replace('"', '\\"')
+    content_doc = f'{{\"deltaFormat\":[{{\"insert\":\"{params.content}\"}}]}}'
+    escaped_content = content_doc.replace('"', '\\"')
 
     if params.after_block_id:
         mutation = f"""
