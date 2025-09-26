@@ -24,7 +24,7 @@ class CreateBoardGroupParams(BaseModel):
     board_id: str
     group_name: str
 
-# 3 - monday-create-item: Creates a new item or sub-item in a Monday.com board
+# 3 - monday-create-item: Creates a new item in a Monday.com board
 class CreateItemParams(BaseModel):
     item_name: str
     board_id: str
@@ -32,6 +32,7 @@ class CreateItemParams(BaseModel):
     column_values: Optional[dict] = None
     create_labels_if_missing: bool = False
 
+# 22 - monday-create-subitem: Creates a new subitem in a Monday.com item
 class CreateSubitemParams(BaseModel):
     subitem_name: str
     parent_item_id: str = None
@@ -51,6 +52,13 @@ class CreateDocParams(BaseModel):
     kind: Optional[str] = None
     column_id: Optional[str] = None
     item_id: Optional[str] = None 
+
+# 23 -  monday-create-column: Crea a Monday.com column
+class CreateColumnParams(BaseModel):
+    board_id:str
+    column_title:str
+    column_type: Optional[str] = None
+    defaults: Optional[Dict[str, Any]] = None    
 
 #-----------------------------------------------------------------------------------------------------------------  
 #-----------------------LIST--------------------------------------------------------------------------------------
@@ -91,6 +99,7 @@ class GetDocsParams(BaseModel):
 class GetDocContentParams(BaseModel):
     doc_id: str
 
+# 25 - monday-list-workspaces: Lists all available Monday.com workspaces
 
 #----------------------------------------------------------------------------------------------------------------- 
 #-----------------------GET---------------------------------------------------------------------------------------
@@ -149,7 +158,7 @@ class DeleteGroupByIdParams(BaseModel):
 class DeleteItemByIdParams(BaseModel):
     item_id:str
 
-# - monday-delete-column: Deletes a Monday.com column
+# 24 - monday-delete-column: Deletes a Monday.com column
 class DeleteColumnByIdParams(BaseModel):
     board_id:  str
     column_id: str
@@ -165,12 +174,7 @@ class FetchItemsByBoardId(BaseModel):
 class columnType(BaseModel):
     value:str 
 
-class CreateColumnParams(BaseModel):
-    board_id:str
-    column_title:str
-    column_type: Optional[str] = None
-    defaults: Optional[Dict[str, Any]] = None
-
+# 26 - monday-import-info-from-excel: Read excel and create board, group, item, subitem, column containing information from excel rows on Monday.com 
 class OpenExcel(BaseModel):
     file_name:str
     download:str = "False"

@@ -266,10 +266,8 @@ async def create_item(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         ) 
-
-    #===================================
-
-# 3.1 - monday-create-subitem: Creates a new sub-item in a Monday.com item
+ 
+# 22 - monday-create-subitem: Creates a new sub-item in a Monday.com item
 @app.post("/monday/subitem/create")
 async def create_subitem(request: Request) -> OutputModel:
     """
@@ -563,6 +561,101 @@ async def create_doc(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
    
+# 23 -  monday-create-column: Crea a Monday.com column
+@app.post("/monday/columns/create")
+async def create_column(request: Request) -> OutputModel:
+    """
+    Crea una nueva columna en Monday. com 
+    
+    Parámetros de entrada: 
+        board_id: ID del tablero
+        column_title: Nombre de la columna que se incorporará 
+        column_type: Tipo de columna          
+        defaults: Valores predeterminados de la nueva columna (json).     
+
+    """
+    #Creo un identificador unico
+    invocation_id = str(uuid4())
+    try: 
+        #Abro conexion
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+        invocationId=invocation_id, 
+        response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
+    )
+    #Traigo los datos del request
+    data = await request.json()
+    params = None
+    
+    try:
+        #parseo los datos del request
+        logger.info("Parse input")
+        params = CreateColumnParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error al recuperar los parámetros, verifique que el ID del tablero proporcionado, exista en Monday.com: {e}"
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    
+    # Manejo de defaults → string JSON escapado
+    defaults_str = ""
+    if params.defaults is not None:
+        defaults_json = json.dumps(params.defaults, ensure_ascii=False)
+        defaults_json_escaped = defaults_json.replace("\"", "\\\"")
+        defaults_str = f', defaults: "{defaults_json_escaped}"'
+
+    # Construir mutación GraphQL
+    mutation = f"""
+        mutation {{
+            create_column (
+                board_id: {params.board_id},
+                title: "{params.column_title}",
+                column_type: {params.column_type or "text"}
+                {defaults_str}
+            ) {{
+                id
+            }}
+        }}
+    """
+
+    logger.info("Mutación enviada a Monday:")
+    logger.info(mutation)
+
+    # Ejecutar mutación
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la creación de columna en Monday.com: {e}")]
+        )
+
+    # Procesar respuesta
+    try:
+        column = (response or {}).get("data", {}).get("create_column")
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
+        )
+
+    # Generar mensaje de salida
+    if column:
+        message = f"Columna creada en Monday.com con ID: {column['id']}"
+    else:
+        message = "No se recibió respuesta de Monday.com al crear la columna."
+
+    return OutputModel(
+        invocationId=invocation_id,
+        status="success",
+        response=[ResponseMessageModel(message=message)]
+    )
 
 #______________________________________________________________________________________________________________
 #___________________________ LIST______________________________________________________________________________
@@ -789,7 +882,6 @@ async def list_items_in_groups(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=message)]
     )
 
-
 # 9 - monday-list-subitems-in-items: Lists all sub-items for given Monday.com items
 @app.post("/monday/subitem_in_item/list")
 async def list_subitems_in_items(request: Request) -> OutputModel:
@@ -915,7 +1007,7 @@ async def get_item_updates(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     message = ""
-    if not response is None:
+    if response is not None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")
         logger.info(response)
@@ -939,9 +1031,8 @@ async def get_item_updates(request: Request) -> OutputModel:
 
         message = f"{message} Monday.com"
     else:
-        logger.info("sin respuesta")
-    
-    message = f"No se encontraron actualizaciones asociadas a la tarea especificada."
+        logger.info("sin respuesta")    
+        message = f"No se encontraron actualizaciones asociadas a la tarea especificada."
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
@@ -1204,16 +1295,16 @@ async def listUsers() -> OutputModel:
         usuario.teams = user["teams"]
         usuarios.append(usuario)
 
-# Configurar el entorno de plantillas de Jinja2
+    # Configurar el entorno de plantillas de Jinja2
     file_loader = FileSystemLoader(searchpath="./")
     env = Environment(loader=file_loader)
 
-# Renderizar la plantilla con los datos
+    # Renderizar la plantilla con los datos
     template = env.get_template('templates/response_template_users.jinja')
 
     message = template.render(users=usuarios,cant_users=int(len(usuarios)))
 
-# Imprimir el mensaje resultante
+    # Imprimir el mensaje resultante
     logger.info(message)
 
     return OutputModel(
@@ -1221,6 +1312,73 @@ async def listUsers() -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
+# 25 - monday-list-workspaces: Lists all available Monday.com workspaces
+@app.post("/monday/workspaces/list")
+async def listWorkspaces(request: Request) -> OutputModel:
+    """
+    Lista todos los espacios de trabajo de Monday.com directamente (sin pasar por boards)
+    """
+    invocation_id = str(uuid4())
+
+    # Conectar con el cliente Monday
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
+        )
+
+    # Query GraphQL directa para listar workspaces
+    query = """
+    query {
+        workspaces {
+            id
+            name
+            kind
+            description
+        }
+    }
+    """
+
+    try:
+        response = monday_client.custom._query(query)
+        logger.info(response)
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al solicitar la lista de workspaces de Monday.com: {e}")]
+        )
+
+    # Procesar respuesta
+    try:
+        workspaces_data = response.get("data", {}).get("workspaces", [])
+    except Exception as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
+        )
+
+    # Construir el mensaje de salida
+    if workspaces_data:
+        lines = []
+        for w in workspaces_data:
+            lines.append(
+                f"ID del espacio de trabajo: {w.get('id')}\\n"
+                f"Nombre: {w.get('name')}\\n"
+                f"Descripción: {w.get('description')}\\n"
+                f"Tipo de espacio de trabajo: {w.get('kind')}\\n"
+                "-----\\n"
+            )
+        message = f"Workspaces:\n\n" + "\n".join(lines)
+        #message = "Workspaces:\\n\ " + "\\n".join(lines)
+    else:
+        message = "No se encontraron workspaces en Monday.com."
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 #______________________________________________________________________________________________________________
 #______________________________________________________________________________________________________________
@@ -1829,8 +1987,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
-
-# - monday-delete-column: Deletes a Monday.com column
+# 24 -  monday-delete-column: Deletes a Monday.com column
 @app.delete("/monday/column/delete")
 async def delete_column_by_id(request: Request) -> OutputModel:
     """
@@ -1902,7 +2059,6 @@ async def delete_column_by_id(request: Request) -> OutputModel:
 #______________________________________________________________________________________________________________
 #___________________________ OTHERS____________________________________________________________________________
 #______________________________________________________________________________________________________________
-
 
 @app.post("/monday/board/fetch_items_by_board_id")
 async def fetch_items_by_board_id(request: Request) -> OutputModel:
@@ -2039,181 +2195,6 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
-#------------------REVISAR-----------------------------------------
-#    message = "Épicas"
-#    content = {"message":message}
-#    headers = {'Content-Disposition': 'inline; filename="out.json"'}
-
-#    return JSONResponse(
-#        content=content,
-#        headers=headers
-#    )
-#-----------------------------------------------------------------
-
-@app.post("/monday/columns/create")
-async def create_column(request: Request) -> OutputModel:
-    """
-    Crea una nueva columna en Monday. com 
-    
-    Parámetros de entrada: 
-        board_id: ID del tablero
-        column_title: Nombre de la columna que se incorporará 
-        column_type: Tipo de columna          
-        defaults: Valores predeterminados de la nueva columna (json).     
-
-    """
-    #Creo un identificador unico
-    invocation_id = str(uuid4())
-    try: 
-        #Abro conexion
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-    except requests.RequestException as e:
-        return OutputModel(
-        invocationId=invocation_id, 
-        response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
-    )
-    #Traigo los datos del request
-    data = await request.json()
-    params = None
-    
-    try:
-        #parseo los datos del request
-        logger.info("Parse input")
-        params = CreateColumnParams(**data)
-        logger.info(params)
-    except Exception as e:
-        message = f"Error al recuperar los parámetros, verifique que el ID del tablero proporcionado, exista en Monday.com: {e}"
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
-    
-    # Manejo de defaults → string JSON escapado
-    defaults_str = ""
-    if params.defaults is not None:
-        defaults_json = json.dumps(params.defaults, ensure_ascii=False)
-        defaults_json_escaped = defaults_json.replace("\"", "\\\"")
-        defaults_str = f', defaults: "{defaults_json_escaped}"'
-
-    # Construir mutación GraphQL
-    mutation = f"""
-        mutation {{
-            create_column (
-                board_id: {params.board_id},
-                title: "{params.column_title}",
-                column_type: {params.column_type or "text"}
-                {defaults_str}
-            ) {{
-                id
-            }}
-        }}
-    """
-
-    logger.info("Mutación enviada a Monday:")
-    logger.info(mutation)
-
-    # Ejecutar mutación
-    try:
-        response = monday_client.custom._query(mutation)
-        logger.info(response)
-    except requests.RequestException as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            status="error",
-            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la creación de columna en Monday.com: {e}")]
-        )
-
-    # Procesar respuesta
-    try:
-        column = (response or {}).get("data", {}).get("create_column")
-    except Exception as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            status="error",
-            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
-        )
-
-    # Generar mensaje de salida
-    if column:
-        message = f"Columna creada en Monday.com con ID: {column['id']}"
-    else:
-        message = "No se recibió respuesta de Monday.com al crear la columna."
-
-    return OutputModel(
-        invocationId=invocation_id,
-        status="success",
-        response=[ResponseMessageModel(message=message)]
-    )
-
-# monday-list-workspaces: Lists all available Monday.com workspaces
-@app.post("/monday/workspaces/list")
-async def listWorkspaces(request: Request) -> OutputModel:
-    """
-    Lista todos los espacios de trabajo de Monday.com directamente (sin pasar por boards)
-    """
-    invocation_id = str(uuid4())
-
-    # Conectar con el cliente Monday
-    try:
-        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-    except requests.RequestException as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
-        )
-
-    # Query GraphQL directa para listar workspaces
-    query = """
-    query {
-        workspaces {
-            id
-            name
-            kind
-            description
-        }
-    }
-    """
-
-    try:
-        response = monday_client.custom._query(query)
-        logger.info(response)
-    except requests.RequestException as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Error al solicitar la lista de workspaces de Monday.com: {e}")]
-        )
-
-    # Procesar respuesta
-    try:
-        workspaces_data = response.get("data", {}).get("workspaces", [])
-    except Exception as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
-        )
-
-    # Construir el mensaje de salida
-    if workspaces_data:
-        lines = []
-        for w in workspaces_data:
-            lines.append(
-                f"ID del espacio de trabajo: {w.get('id')}\\n"
-                f"Nombre: {w.get('name')}\\n"
-                f"Descripción: {w.get('description')}\\n"
-                f"Tipo de espacio de trabajo: {w.get('kind')}\\n"
-                "-----\\n"
-            )
-        message = "Workspaces:\\n\
-" + "\\n".join(lines)
-    else:
-        message = "No se encontraron workspaces en Monday.com."
-
-    return OutputModel(
-        invocationId=invocation_id,
-        response=[ResponseMessageModel(message=message)]
-    )
-
-  
 def process_excel(hilo:Hilo,params:OpenExcel,monday_client:MondayClient,invocation_id:str):
     """
         Proceso que se dispara en un hilo separado desde open_excel
@@ -2355,8 +2336,7 @@ async def analizar_excel(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
     )
 
-
-#monday-open_excel: -----------COMPLETAR-----------------
+# 26 - monday-import-info-from-excel: Read excel and create board, group, item, subitem, column containing information from excel rows on Monday.com 
 @app.post("/monday/read_excel")
 async def open_excel(request: Request) -> OutputModel:
     """Abre un archivo excel y procesa los datos creando boards grupos e items
