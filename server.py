@@ -954,6 +954,7 @@ async def get_docs(request: Request) -> OutputModel:
         Lista todos los documentos disponibles en Monday.com
 
         Parámetros de entrada:
+            object_ids List[int]: Lista de los IDs de los documentos a visualizar
             limit (int): Cantidad máxima de documentos a mostrar
 
         Retorna:
@@ -1019,7 +1020,7 @@ async def get_docs(request: Request) -> OutputModel:
             logger.info("error en el try de docs")
             return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"EError al procesar la respuesta de Monday.com: {e}")]            
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
         )
     
         if not docs:

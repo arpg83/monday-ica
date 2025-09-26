@@ -84,7 +84,7 @@ class GetItemUpdatesParams(BaseModel):
 
 # 11 - monday-get-docs: Lists documents in Monday.com, optionally filtered by folder
 class GetDocsParams(BaseModel):
-    object_ids: int
+    object_ids: List[int]
     limit: int = 20  
 
 # 12 - monday-get-doc-content: Retrieves the content of a specific document
