@@ -179,7 +179,8 @@ class ExcelUtilsMonday:
             "pos":self.pos,
             "error":error,
             "message":str(self.message),
-            "local_filename":str(self.local_filename)
+            "local_filename":str(self.local_filename),
+            "sub_board_id":str(self.sub_board_id)
         }
         text_json = json.dumps(data)
         logging.info(text_json)
@@ -193,6 +194,7 @@ class ExcelUtilsMonday:
         self.board_id = data["board_id"]
         self.group_id = data["group_id"]
         self.item_id_l1 = data["item_id"]
+        self.sub_board_id = data["sub_board_id"]
         self.pos = data["pos"]
         self.error = bool(data["error"])
         self.local_filename = data["local_filename"]
@@ -302,7 +304,7 @@ class ExcelUtilsMonday:
                         self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
                         self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
-                        self.sub_board_columns_creadas = False
+                        #self.sub_board_columns_creadas = False #Actualmnete el board es compartido para todos los subitems del board principal
                     if self.identify_type(outline_lvl) == 'subiteml1':
                         self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                         if not self.sub_board_columns_creadas:
@@ -323,6 +325,10 @@ class ExcelUtilsMonday:
                         time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
                     if self.detener:
                         break
+            if not self.sub_board_id == None:
+                self.xls_delete_column(monday_client,self.sub_board_id,"person")
+                self.xls_delete_column(monday_client,self.sub_board_id,"status")
+                self.xls_delete_column(monday_client,self.sub_board_id,"date0")
         except Exception as e:
             self.error = True
             self.message = e
@@ -363,7 +369,23 @@ class ExcelUtilsMonday:
         self.eliminado_grupo_inicial = False
         return  board_id
     
-    def xls_create_colummn(self,monday_client:MondayClient,board_id,title:str,description:str,column_type:str,defaults:dict):
+    def xls_delete_column(self,monday_client:MondayClient,board_id:str,column_id):
+        """Elimina una columna de monday.com"""
+        mutation = """
+        mutation {
+            delete_column (board_id: %s, column_id: "%s") {
+                id
+            }
+        }
+        """ % (board_id,column_id)
+        logger.info(mutation)
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+        id_col = response["data"]["delete_column"]["id"]
+        logger.info(id_col)
+        return id_col
+
+    def xls_create_colummn(self,monday_client:MondayClient,board_id:str,title:str,description:str,column_type:str,defaults:dict):
         """Crea una columna en un board"""
         defaults_json = json.dumps(defaults, ensure_ascii=False)
         defaults_json_escaped = defaults_json.replace("\"", "\\\"")
