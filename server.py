@@ -1871,7 +1871,7 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
 #______________________________________________________________________________________________________________
 
 # 20 - monday-delete-group: Deletes a Monday.com group
-@app.delete("/monday/group/delete")
+@app.post("/monday/group/delete")
 async def delete_group_by_id(request: Request) -> OutputModel:
     """
     Eliminar un grupo de un tablero de Monday.com 
@@ -1930,7 +1930,7 @@ async def delete_group_by_id(request: Request) -> OutputModel:
         )
 
 # 21 - monday-delete-item: Deletes a Monday.com item
-@app.delete("/monday/item/delete")
+@app.post("/monday/item/delete")
 async def delete_item_by_id(request: Request) -> OutputModel:
     """
     Eliminar una tarea de Monday.com
@@ -1988,7 +1988,7 @@ async def delete_item_by_id(request: Request) -> OutputModel:
         )
 
 # 24 -  monday-delete-column: Deletes a Monday.com column
-@app.delete("/monday/column/delete")
+@app.post("/monday/column/delete")
 async def delete_column_by_id(request: Request) -> OutputModel:
     """
     Eliminar una columna de un tablero de Monday.com 
