@@ -1754,12 +1754,12 @@ async def archive_item_by_id(request: Request) -> OutputModel:
     """
     invocation_id = str(uuid4())
     monday_client = None
-    try: 
+    try:
         monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
     except requests.RequestException as e:
         return OutputModel(
         invocationId=invocation_id,
-        status="error",        
+        status="error",
         response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
     )
 
@@ -1788,11 +1788,23 @@ async def archive_item_by_id(request: Request) -> OutputModel:
                     response=[ResponseMessageModel(message=message)]
             )
     #Hacer Template response_template_archive_item.jinja
+    sin_respuesta = True
+    item_id = ""
     if not response is None:
-        logger.info("Procesa respuesta")
-        message = f"Tarea archivada {response['data']['archive_item']['id']} en Monday.com"
-    else:
-        logger.info("sin respuesta")
+        sin_respuesta = False
+        item_id = response['data']['archive_item']['id']
+
+    template = template_env.get_template("response_template_archive_item.jinja")
+    message = template.render(
+        item_id = item_id
+        ,sin_respuesta = sin_respuesta
+    )
+
+#    if not response is None:
+#        logger.info("Procesa respuesta")
+#        message = f"Tarea archivada {response['data']['archive_item']['id']} en Monday.com"
+#    else:
+#        logger.info("sin respuesta")
     
     return OutputModel(
             invocationId=invocation_id,
