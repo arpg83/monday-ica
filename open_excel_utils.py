@@ -121,13 +121,19 @@ class ExcelUtilsMonday:
 
     def download_file(self,url, local_filename):
         """Descarga un archivo desde internet"""
-        with requests.get(url, stream=True,timeout=30) as r:
-            r.raise_for_status()
-            with open(local_filename, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192): 
-                    f.write(chunk)
-        self.local_filename = local_filename
-        return local_filename
+        try:
+            with requests.get(url, stream=True,timeout=30) as r:
+                #r.raise_for_status()
+                if r.status_code == 200:
+                    with open(local_filename, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192): 
+                            f.write(chunk)
+                    self.local_filename = local_filename
+                    return True
+        except Exception as e:
+            logger.error(e)
+            return False
+        return False
 
     def get_file(self,uid,filename):
         """descarga el archivo"""
@@ -139,7 +145,9 @@ class ExcelUtilsMonday:
             if self.download:
                 file_path= self.get_local_fileName(uid,"archivo.xlsx")
                 
-                self.download_file(filename,file_path)
+                if not self.download_file(filename,file_path):
+                    self.error = True
+                    self.message = "No se pudo descargar el archivo"
                 logger.info(f"descarga {filename} {file_path}")
             else:
                 file_path= self.get_local_fileName(uid,"archivo.xlsx")
@@ -152,13 +160,15 @@ class ExcelUtilsMonday:
         if download:
             self.download = True
         file_path = self.get_file(uid,filename)
-
-        logger.info(f"abriendo:{file_path}")
-        df = pd.read_excel(file_path)
-        logger.info(f"Retorna pandas:{file_path}")
-        #logger.info(df)
-        #logger.info(df.columns.values)
-        return df
+        if self.error:
+            return None
+        else:
+            logger.info(f"abriendo:{file_path}")
+            df = pd.read_excel(file_path)
+            logger.info(f"Retorna pandas:{file_path}")
+            #logger.info(df)
+            #logger.info(df.columns.values)
+            return df
 
     def list_columns(self,df:pd.DataFrame):
         """lista columnas del documento pandas/excel"""
@@ -286,103 +296,108 @@ class ExcelUtilsMonday:
 
     def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
+        self.error = False
+        self.message = ""
         self.continuar = continuar
         #Actualmente sobrescribe el archivo si continua
         logger.info(download)
         df = self.get_pandas(filename,download,uid)
-        logger.info(self.list_columns(df))
-        logger.info(uid)
-        cant_total_filas = len(df.index)
-        cantidad_a_procesar = 0
-        self.procesando = True
-        if rows == 0:
-            cantidad_a_procesar = cant_total_filas
-        if continuar:
-            logger.info("Continua proceso")
-            self.read_estado()
-        if continuar and rows != 0:
-            cantidad_a_procesar = self.pos + rows + 1
-            if cantidad_a_procesar >= cant_total_filas:
+        if self.error:
+            self.salvar_estado(self.error)
+        else:    
+            logger.info(self.list_columns(df))
+            logger.info(uid)
+            cant_total_filas = len(df.index)
+            cantidad_a_procesar = 0
+            self.procesando = True
+            if rows == 0:
                 cantidad_a_procesar = cant_total_filas
-        if not continuar:
-            self.pos = 0
-        logger.info(f"se procesaran {rows} {self.pos} de {cantidad_a_procesar} registros")
-        if continuar:
-            if self.error:
-                self.pos = self.pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
+            if continuar:
+                logger.info("Continua proceso")
+                self.read_estado()
+            if continuar and rows != 0:
+                cantidad_a_procesar = self.pos + rows + 1
+                if cantidad_a_procesar >= cant_total_filas:
+                    cantidad_a_procesar = cant_total_filas
+            if not continuar:
+                self.pos = 0
+            logger.info(f"se procesaran {rows} {self.pos} de {cantidad_a_procesar} registros")
+            if continuar:
+                if self.error:
+                    self.pos = self.pos -1 # Si termino en estado de error retomo desde el ultimo registro que no se pudo procesar
 
-            self.eliminado_grupo_inicial = True # Seteo en verdadero que el grupo inicial fue eliminado para que no dispare el error de que el grupo inicial no existe
-            self.error = False
-        logger.info("Cantidad de rows:")
-        logger.info(cantidad_a_procesar)
-        try:
-            for i in range(cantidad_a_procesar):
-                if not continuar or (continuar and i > self.pos):
-                    self.pos = i
-                    title = self.read_cell(df,"Name",i)
-                    dt_inicio = self.read_cell(df,"Start",i)
-                    dt_fin = self.read_cell(df,"Finish",i)
-                    #March 5, 2025 9:00 AM
-                    fecha_inicio = self.parse_date(dt_inicio)
-                    fecha_fin = self.parse_date(dt_fin)
-                    #fecha_inicio = "2025-03-05"
-                    #fecha_fin = "2025-03-05"
-                    outline_lvl = self.read_cell(df,"Outline Level",i)
-                    message = f"Row: {i}"
-                    logger.info(message)
-                    logger.info(title)
-                    logger.info(outline_lvl)
-                    logger.info(self.identify_type(outline_lvl))
-                    if self.identify_type(outline_lvl) == 'board':
-                        self.board_id = self.xls_create_board(monday_client,title,'public')
-                        self.id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.board_id,"Inicio","Fecha inicio","date",fecha_inicio)
-                        self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date",fecha_inicio)
-                    if self.identify_type(outline_lvl) == 'group':
-                        self.group_id = self.xls_create_group(monday_client,title,self.board_id)
-                    if self.identify_type(outline_lvl) == 'item':
-                        self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
-                        self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
-                        self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
-                        #self.sub_board_columns_creadas = False #Actualmnete el board es compartido para todos los subitems del board principal
-                    if self.identify_type(outline_lvl) == 'subiteml1':
-                        self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                        if not self.sub_board_columns_creadas:
-                            self.sub_board_id = self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
-                            self.sub_board_id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date",fecha_inicio)
-                            self.sub_board_id_column_fecha_fin = self.xls_create_colummn(monday_client,self.sub_board_id,"Fin","Fecha fin","date",fecha_inicio)
-                            self.sub_board_columns_creadas = True
-                        self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
-                        self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
-                        self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
-                    if self.identify_type(outline_lvl) == 'subiteml2':
-                        self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                    if self.identify_type(outline_lvl) == 'subiteml3':
-                        self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                    if self.identify_type(outline_lvl) == 'subiteml4':
-                        self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                    if self.esperar:
-                        time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
-                    if self.detener:
-                        break
-            if not self.sub_board_id == None:
-                self.xls_delete_column(monday_client,self.sub_board_id,"person")
-                self.xls_delete_column(monday_client,self.sub_board_id,"status")
-                self.xls_delete_column(monday_client,self.sub_board_id,"date0")
-        except Exception as e:
-            self.error = True
-            self.message = e
-            logger.error(e)
+                self.eliminado_grupo_inicial = True # Seteo en verdadero que el grupo inicial fue eliminado para que no dispare el error de que el grupo inicial no existe
+                self.error = False
+            logger.info("Cantidad de rows:")
+            logger.info(cantidad_a_procesar)
+            try:
+                for i in range(cantidad_a_procesar):
+                    if not continuar or (continuar and i > self.pos):
+                        self.pos = i
+                        title = self.read_cell(df,"Name",i)
+                        dt_inicio = self.read_cell(df,"Start",i)
+                        dt_fin = self.read_cell(df,"Finish",i)
+                        #March 5, 2025 9:00 AM
+                        fecha_inicio = self.parse_date(dt_inicio)
+                        fecha_fin = self.parse_date(dt_fin)
+                        #fecha_inicio = "2025-03-05"
+                        #fecha_fin = "2025-03-05"
+                        outline_lvl = self.read_cell(df,"Outline Level",i)
+                        message = f"Row: {i}"
+                        logger.info(message)
+                        logger.info(title)
+                        logger.info(outline_lvl)
+                        logger.info(self.identify_type(outline_lvl))
+                        if self.identify_type(outline_lvl) == 'board':
+                            self.board_id = self.xls_create_board(monday_client,title,'public')
+                            self.id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.board_id,"Inicio","Fecha inicio","date",fecha_inicio)
+                            self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date",fecha_inicio)
+                        if self.identify_type(outline_lvl) == 'group':
+                            self.group_id = self.xls_create_group(monday_client,title,self.board_id)
+                        if self.identify_type(outline_lvl) == 'item':
+                            self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id,fecha_inicio,fecha_fin)
+                            self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
+                            self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
+                            #self.sub_board_columns_creadas = False #Actualmnete el board es compartido para todos los subitems del board principal
+                        if self.identify_type(outline_lvl) == 'subiteml1':
+                            self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                            if not self.sub_board_columns_creadas:
+                                self.sub_board_id = self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
+                                self.sub_board_id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date",fecha_inicio)
+                                self.sub_board_id_column_fecha_fin = self.xls_create_colummn(monday_client,self.sub_board_id,"Fin","Fecha fin","date",fecha_inicio)
+                                self.sub_board_columns_creadas = True
+                            self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
+                            self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
+                            self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
+                        if self.identify_type(outline_lvl) == 'subiteml2':
+                            self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                        if self.identify_type(outline_lvl) == 'subiteml3':
+                            self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                        if self.identify_type(outline_lvl) == 'subiteml4':
+                            self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
+                        if self.esperar:
+                            time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
+                        if self.detener:
+                            break
+                if not self.sub_board_id == None:
+                    self.xls_delete_column(monday_client,self.sub_board_id,"person")
+                    self.xls_delete_column(monday_client,self.sub_board_id,"status")
+                    self.xls_delete_column(monday_client,self.sub_board_id,"date0")
+            except Exception as e:
+                self.error = True
+                self.message = e
+                logger.error(e)
+                self.procesando = False
+            logger.info("Fin de proceso")
+            logger.info(self.board_id)
+            logger.info(self.group_id)
+            logger.info(self.item_id_l1)
+            logger.info(self.pos)
+            if cant_total_filas == rows:
+                self.proceso_completo = True
+            self.salvar_estado(self.error)
+            self.clean_files()
             self.procesando = False
-        logger.info("Fin de proceso")
-        logger.info(self.board_id)
-        logger.info(self.group_id)
-        logger.info(self.item_id_l1)
-        logger.info(self.pos)
-        if cant_total_filas == rows:
-            self.proceso_completo = True
-        self.salvar_estado(self.error)
-        self.clean_files()
-        self.procesando = False
 
     def limpiar_nombre(self,texto:str):
         """Limpia el texto de un titulo"""
