@@ -9,6 +9,7 @@ import shutil
 import json
 from threading import Thread
 from datetime import datetime,timedelta
+from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,12 @@ class ExcelUtilsWorks:
         logger.info("intenta clean")
         excel_monday.proceso_completo = True
         excel_monday.clean_files()
+        if os.path.exists(excel_monday.get_local_uid_path(uid)):
+            try:
+                os.remove(excel_monday.get_local_uid_path(uid))
+            except Exception as e:
+                logger.error(e)
+                return False
         return True
 
 
@@ -180,31 +187,63 @@ class ExcelUtilsMonday:
             "error":error,
             "message":str(self.message),
             "local_filename":str(self.local_filename),
-            "sub_board_id":str(self.sub_board_id)
+            "sub_board_id":str(self.sub_board_id),
+            "id_column_fecha_inicio":str(self.id_column_fecha_inicio),
+            "id_column_fecha_fin":str(self.id_column_fecha_fin),
+            "sub_board_id_column_fecha_inicio":str(self.sub_board_id_column_fecha_inicio),
+            "sub_board_id_column_fecha_fin":str(self.sub_board_id_column_fecha_fin),
         }
         text_json = json.dumps(data)
         logging.info(text_json)
         with open(f'{self.get_local_uid_path(self.uid)}/data.json', 'w') as outfile:
             json.dump(data, outfile)
 
+    def listar_estado_texto(self):
+        """Aplica un template jinja a la información de estado"""
+        logger.info("obtiene informacion del proceso")
+        template_env = Environment(loader=FileSystemLoader("templates"))
+        template = template_env.get_template("response_template_estado_proceso_excel_uid.jinja")
+        message = template.render(
+            proceso = self
+        )
+        logger.info(message)
+        return message
+
+
     def read_estado(self):
         """Recupera el estado del proceso del archivo json data.json"""
-        with open(f'{self.get_local_uid_path(self.uid)}/data.json', 'r') as input:
-            data = json.load(input)
-        self.board_id = data["board_id"]
-        self.group_id = data["group_id"]
-        self.item_id_l1 = data["item_id"]
-        self.sub_board_id = data["sub_board_id"]
-        self.pos = data["pos"]
-        self.error = bool(data["error"])
-        self.local_filename = data["local_filename"]
-        logger.info("Fin de proceso")
-        logger.info(self.board_id)
-        logger.info(self.group_id)
-        logger.info(self.item_id_l1)
-        logger.info(self.pos)
-        logger.info(self.error)
-        logger.info(self.local_filename)
+        path = f'{self.get_local_uid_path(self.uid)}/data.json'
+        if os.path.exists(path):
+            with open(path, 'r') as input:
+                data = json.load(input)
+            self.board_id = data["board_id"]
+            self.group_id = data["group_id"]
+            self.item_id_l1 = data["item_id"]
+            if "sub_board_id" in data:
+                self.sub_board_id = data["sub_board_id"]
+            if "message" in data:
+                self.message = data["message"]
+            self.pos = data["pos"]
+            if "error" in data:
+                self.error = bool(data["error"])
+            self.local_filename = data["local_filename"]
+            if "id_column_fecha_inicio" in data:
+                self.id_column_fecha_inicio = data["id_column_fecha_inicio"]
+            if "id_column_fecha_fin" in data:
+                self.id_column_fecha_fin = data["id_column_fecha_fin"]
+            if "sub_board_id_column_fecha_inicio" in data:
+                self.sub_board_id_column_fecha_inicio = data["sub_board_id_column_fecha_inicio"]
+            if "sub_board_id_column_fecha_fin" in data:
+                self.sub_board_id_column_fecha_fin = data["sub_board_id_column_fecha_fin"]
+            logger.info("Fin de proceso")
+            logger.info(self.board_id)
+            logger.info(self.group_id)
+            logger.info(self.item_id_l1)
+            logger.info(self.pos)
+            logger.info(self.error)
+            logger.info(self.local_filename)
+            return True
+        return False
 
     def identify_type(self,outline_lvl):
         """Identifica si la fila es un board, grupo, item o subitem"""

@@ -2282,6 +2282,15 @@ async def estado_proceso(request: Request) -> OutputModel:
             arr_msg.append(msg_error)
 
     message = ""
+    informacion_uid = ""
+    if uid != None and uid != "":
+        excel_monday = ExcelUtilsMonday()
+        excel_monday.uid = uid
+        if excel_monday.read_estado():
+            informacion_uid = excel_monday.listar_estado_texto()
+
+
+
     
     template = template_env.get_template("response_template_estado_proceso_excel.jinja")
     cant_procesos = len(hilos)
@@ -2289,7 +2298,8 @@ async def estado_proceso(request: Request) -> OutputModel:
         procesos_activos = hilos,
         cant_procesos = cant_procesos,
         msg_error = arr_msg,
-        arr_proceso_antiguos = arr_proceso_antiguos
+        arr_proceso_antiguos = arr_proceso_antiguos,
+        informacion_uid = informacion_uid
     )
 
     logger.info(message)
@@ -2379,7 +2389,8 @@ async def open_excel(request: Request) -> OutputModel:
     #Mensaje de retorno
     template = template_env.get_template("response_template_process_excel.jinja")
     message = template.render(
-        file_name = params.file_name
+        file_name = params.file_name,
+        uid = invocation_id
     )
 
     return OutputModel(
