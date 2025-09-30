@@ -563,6 +563,8 @@ async def create_doc(request: Request) -> OutputModel:
     except NameError:
             doc_url = f"(La URL del Espacio de trabajo no está configurada) Doc ID {doc_id}"
 
+    #Hacer Template response_template_doc_create.jinja  tomado por LR
+
     message = f"El documento fue creado exitosamente!\nTitulo: {params.title}\nID del documento: {doc_id}\nURL: {doc_url}"
 
     return OutputModel(
@@ -654,6 +656,8 @@ async def create_column(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
 
+    #Hacer Template response_template_column_create.jinja
+
     # Generar mensaje de salida
     if column:
         message = f"Columna creada en Monday.com con ID: {column['id']}"
@@ -699,6 +703,9 @@ async def listBoards(request: Request) -> OutputModel:
     board_list = "\n".join(
         [f"- {board['name']} (ID: {board['id']})" for board in boards]
     )
+    
+    #Hacer Template response_template_boards_list.jinja
+    
     message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
 
     return OutputModel(
@@ -759,6 +766,8 @@ async def getBoardGroups(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     
+    #Hacer Template response_template_boards_group_get.jinja
+
     message = ""
     if not response is None:
         #Genero el mensaje de salida
@@ -961,6 +970,8 @@ async def list_subitems_in_items(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message="No se encontraron subtareas en las tareas especificadas.")]
         )
 
+    #Hacer Template response_template_item_list.jinja
+
     message = f"Subtareas en las Tareas {params.item_ids} :\\n" + "\\n".join(subitems)
 
     return OutputModel(
@@ -1015,6 +1026,9 @@ async def get_item_updates(request: Request) -> OutputModel:
                 status="error",
                 response=[ResponseMessageModel(message=message)]
         )
+    
+    #Hacer Template response_template_get_item_updates.jinja  (Es bastante complejo)
+
     message = ""
     if response is not None:
         #Genero el mensaje de salida
@@ -1129,6 +1143,8 @@ async def get_docs(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message="No se encontraron documentos para listar en Monday.com.")]
             )
         
+        #Hacer Template response_template_docs_list.jinja (Es complejo para la parametria)
+
         # Procesar respuesta
         lines = []
         for d in docs:
