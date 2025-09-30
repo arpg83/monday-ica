@@ -1787,7 +1787,6 @@ async def archive_item_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
-    #Hacer Template response_template_archive_item.jinja
     sin_respuesta = True
     item_id = ""
     if not response is None:
@@ -1799,12 +1798,6 @@ async def archive_item_by_id(request: Request) -> OutputModel:
         item_id = item_id
         ,sin_respuesta = sin_respuesta
     )
-
-#    if not response is None:
-#        logger.info("Procesa respuesta")
-#        message = f"Tarea archivada {response['data']['archive_item']['id']} en Monday.com"
-#    else:
-#        logger.info("sin respuesta")
     
     return OutputModel(
             invocationId=invocation_id,
