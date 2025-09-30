@@ -563,7 +563,7 @@ async def create_doc(request: Request) -> OutputModel:
     except NameError:
             doc_url = f"(La URL del Espacio de trabajo no está configurada) Doc ID {doc_id}"
 
-    #Hacer Template response_template_doc_create.jinja  tomado por LR
+    #Hacer Template response_template_doc_create.jinja
 
     message = f"El documento fue creado exitosamente!\nTitulo: {params.title}\nID del documento: {doc_id}\nURL: {doc_url}"
 
@@ -1661,16 +1661,29 @@ async def update_item(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
-    message = ""
-    #Hacer Template response_template_item_update.jinja
+    
+    id = ""
+    sin_respuesta = True
     if not response is None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")        
-        message = f"Tarea de Monday.com actualizada. {response['data']['change_multiple_column_values']['id']}"
-        # message = f"Updated Monday.com item. {params.item_id} en el tablero cuyo ID es: : {params.board_id}."  
-        # Faltan los valores de las columnas 
-    else:
-        logger.info("sin respuesta")
+        sin_respuesta = False
+        id = response['data']['change_multiple_column_values']['id']
+    
+    template = template_env.get_template("response_template_item_update.jinja")
+    message = template.render(
+        id = params.subitem_name
+        ,sin_respuesta = sin_respuesta
+    )
+
+#    message = ""
+    #Hacer Template response_template_item_update.jinja ==> Template armado testear Eliminar comentarios luego de testear
+#    if not response is None:
+#        #Genero el mensaje de salida
+#        logger.info("Procesa respuesta")        
+#        message = f"Tarea de Monday.com actualizada. {response['data']['change_multiple_column_values']['id']}"
+#        # message = f"Updated Monday.com item. {params.item_id} en el tablero cuyo ID es: : {params.board_id}."  
+#        # Faltan los valores de las columnas 
+#    else:
+#        logger.info("sin respuesta")
 
     return OutputModel(
             invocationId=invocation_id,
@@ -1732,7 +1745,6 @@ async def move_item_to_group(request: Request) -> OutputModel:
         sin_respuesta = False
         id = response['data']['move_item_to_group']['id']
 
-    #Hacer Template response_move_item_to_group.jinja
     template = template_env.get_template("response_move_item_to_group.jinja")
     message = template.render(
         id = id
