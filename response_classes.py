@@ -29,6 +29,7 @@ class Group:
 
 class Board:
     name:str
+    id:str
     groups:Group = []
 
     def __init__(self):

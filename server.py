@@ -1951,13 +1951,20 @@ async def delete_group_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
-    #Hacer Template response_template_group_delete.jinja
-    if not response is None:
-        logger.info("Procesa respuesta")
-        message = f"ID del Grupo eliminado en Monday.com:  {response['data']['delete_group']['id']}"
-    else:
-        logger.info("sin respuesta")
     
+    sin_respuesta = False
+    id = ""
+    if response is None:
+        sin_respuesta = True
+    else:
+        id = response['data']['delete_group']['id']
+
+    template = template_env.get_template("response_template_group_delete.jinja")
+    message = template.render(
+        id_group = id,
+        sin_respuesta = sin_respuesta
+    )
+
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
@@ -2149,7 +2156,7 @@ async def fetch_items_by_board_id(request: Request) -> OutputModel:
     
     #Recolecto informacion de la respuesta para enviar al template de jinja
     boards = board["data"]["boards"]
-    
+    obj_boards.id = params.board_id
     for board in boards:
         obj_boards.name = board["name"]
         print(obj_boards.name)
