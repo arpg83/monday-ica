@@ -2078,13 +2078,20 @@ async def delete_column_by_id(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la eliminación de la columna de Monday.com: {e}")]               
         )
-
+    
+    sin_respuesta = False
+    id = None
     #Hacer Template response_template_column_delete.jinja
-    if not response is None:
-        logger.info("Procesa respuesta")
-        message = f"ID de la columna eliminada en Monday.com:  {response['data']['delete_column']['id']}"
-    else:
-        logger.info("sin respuesta")
+    if response is None:
+        sin_respuesta = True
+    else: 
+        id = response['data']['delete_column']['id']
+
+    template = template_env.get_template("response_template_column_delete.jinja")
+    message = template.render(
+        column_id = id,
+        sin_respuesta = sin_respuesta
+    )
     
     return OutputModel(
             invocationId=invocation_id,
