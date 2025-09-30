@@ -395,15 +395,24 @@ async def create_update_comment(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
-    
-    message = ""
-    if response is not None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")        
-        message = f"Se creó una nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com: {response['data']['create_update']['id']}"
-    else:
-        logger.info("sin respuesta")    
-        message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
+    error = False
+    if response is None:
+        error = True
+
+    template = template_env.get_template("response_template_comment_update.jinja")
+    message = template.render(
+        update_id = response['data']['create_update']['id'],
+        error = error
+    )
+
+#    message = ""
+#    if response is not None:
+#        #Genero el mensaje de salida
+#        logger.info("Procesa respuesta")        
+#        message = f"Se creó una nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com: {response['data']['create_update']['id']}"
+#    else:
+#        logger.info("sin respuesta")
+#        message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
       
     return OutputModel(
             invocationId=invocation_id,
