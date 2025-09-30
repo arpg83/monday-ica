@@ -1267,6 +1267,8 @@ async def get_doc_content(request: Request) -> OutputModel:
             )
 
          # Procesar respuesta 
+         #Hacer Template response_template_doc_content_get.jinja
+
         lines = [f"Document {doc['name']} (ID: {doc['id']}):\n\nBlocks:"]
         for b in blocks:
             lines.append(f"- Block ID: {b['id']} | Type: {b['type']} | Content: {b['content']}")
@@ -1385,6 +1387,7 @@ async def listWorkspaces(request: Request) -> OutputModel:
         )
 
     # Construir el mensaje de salida
+    #Hacer Template response_workspaces_list.jinja
     if workspaces_data:
         lines = []
         for w in workspaces_data:
@@ -1577,7 +1580,7 @@ async def get_board_columns(request: Request) -> OutputModel:
     message = ""
     
     '''          
-       
+    #Hacer Template response_template_columns_get.jinja
     if not response is None:
 
        
@@ -1659,6 +1662,7 @@ async def update_item(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     message = ""
+    #Hacer Template response_template_item_update.jinja
     if not response is None:
         #Genero el mensaje de salida
         logger.info("Procesa respuesta")        
@@ -1723,6 +1727,8 @@ async def move_item_to_group(request: Request) -> OutputModel:
                 status="error",
                 response=[ResponseMessageModel(message=message)]
         )
+    
+    #Hacer Template response_move_item_to_group.jinja
     message = ""
     if not response is None:
         #Genero el mensaje de salida
@@ -1781,6 +1787,7 @@ async def archive_item_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
+    #Hacer Template response_template_archive_item.jinja
     if not response is None:
         logger.info("Procesa respuesta")
         message = f"Tarea archivada {response['data']['archive_item']['id']} en Monday.com"
@@ -1880,6 +1887,8 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
         invocationId=invocation_id,
         response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
     )
+
+    #Hacer Template response_template_doc_add_block.jinja
     if not block is None:
         logger.info("Procesa respuesta")
         message = f"ID del bloque incorporado en Monday.com: {block['id']}"
@@ -1942,7 +1951,7 @@ async def delete_group_by_id(request: Request) -> OutputModel:
                     status="error",
                     response=[ResponseMessageModel(message=message)]
             )
-    
+    #Hacer Template response_template_group_delete.jinja
     if not response is None:
         logger.info("Procesa respuesta")
         message = f"ID del Grupo eliminado en Monday.com:  {response['data']['delete_group']['id']}"
@@ -2070,6 +2079,7 @@ async def delete_column_by_id(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la eliminación de la columna de Monday.com: {e}")]               
         )
 
+    #Hacer Template response_template_column_delete.jinja
     if not response is None:
         logger.info("Procesa respuesta")
         message = f"ID de la columna eliminada en Monday.com:  {response['data']['delete_column']['id']}"
