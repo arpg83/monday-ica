@@ -1727,15 +1727,17 @@ async def move_item_to_group(request: Request) -> OutputModel:
                 status="error",
                 response=[ResponseMessageModel(message=message)]
         )
-    
-    #Hacer Template response_move_item_to_group.jinja
-    message = ""
+    sin_respuesta = True
     if not response is None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")
-        message = f"Tarea trasladada {response['data']['move_item_to_group']['id']} a otro grupo de Monday.com"
-    else:
-        logger.info("sin respuesta")
+        sin_respuesta = False
+        id = response['data']['move_item_to_group']['id']
+
+    #Hacer Template response_move_item_to_group.jinja
+    template = template_env.get_template("response_move_item_to_group.jinja")
+    message = template.render(
+        id = id
+        ,sin_respuesta = sin_respuesta
+    )
 
     return OutputModel(
             invocationId=invocation_id,
