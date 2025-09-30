@@ -2081,7 +2081,7 @@ async def delete_column_by_id(request: Request) -> OutputModel:
     
     sin_respuesta = False
     id = None
-    #Hacer Template response_template_column_delete.jinja
+
     if response is None:
         sin_respuesta = True
     else: 
