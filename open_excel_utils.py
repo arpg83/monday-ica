@@ -49,12 +49,6 @@ class ExcelUtilsWorks:
         logger.info("intenta clean")
         excel_monday.proceso_completo = True
         excel_monday.clean_files()
-        if os.path.exists(excel_monday.get_local_uid_path(uid)):
-            try:
-                os.remove(excel_monday.get_local_uid_path(uid))
-            except Exception as e:
-                logger.error(e)
-                return False
         return True
 
 
@@ -93,14 +87,14 @@ class ExcelUtilsMonday:
     def clean_files(self):
         """Limpia los archivos"""
         if self.proceso_completo:
-            logger.info("Eliminando")
-            logger.info(self.local_filename)
-            if os.path.exists(self.local_filename):
+            if self.local_filename != "" and  os.path.exists(self.local_filename):
+                logger.info(f"Eliminado:{self.local_filename}")
                 os.remove(self.local_filename)
             logger.info(self.get_local_uid_path(self.uid))
             #Borrar data.json
             data_json = f'{self.get_local_uid_path(self.uid)}/data.json'
             if os.path.exists(data_json):
+                logger.info(f"elimina:{data_json}")
                 os.remove(data_json)
             os.rmdir(self.get_local_uid_path(self.uid))
 
