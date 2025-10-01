@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import os
 from utils import dict_read_property,dict_read_property_into_array,dict_list_prop_id,dict_get_array
 
-from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams,ProcessExcelStatus, DeleteColumnByIdParams
+from schemas import ResponseMessageModel, OutputModel, CreateBoardParams, CreateBoardGroupParams, CreateItemParams, ListBoardsParams, GetBoardGroupsParams, UpdateItemParams, CreateUpdateCommentParams,FetchItemsByBoardId, DeleteItemByIdParams,MoveItemToGroup,GetItemUpdatesParams,GetItemByIdParams, ListItemsInGroupsParams, OpenExcel, ListSubitemsParams, GetBoardColumnsParams, CreateDocParams, DeleteGroupByIdParams, ArchiveItemParams, GetDocsParams, GetDocContentParams, AddDocBlockParams, CreateColumnParams,CreateSubitemParams,ProcessExcelStatus, DeleteColumnByIdParams, CreateDocWorkspaceParams, CreateDocItemParams
 
 from monday import MondayClient
 from monday.resources.types import BoardKind
@@ -572,6 +572,229 @@ async def create_doc(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
    
+# monday-create-doc: Creates a new document by workspace in Monday.com
+@app.post("/monday/doc/create/by_workspace")
+async def create_doc_by_workspace(request: Request) -> OutputModel:
+    """
+        Crea un nuevo documento en workspace en Monday.com
+
+        Parámetros de entrada:
+            title (str): Titulo del documento.
+            workspace_id (int): ID del espacio de trabajo.
+            kind (str): Tipo de documento del espacio de trabajo.
+
+        Retorna:
+            str: Mensaje de confirmación con la URL del documento creado o mensaje del error si la creación falló.
+     """
+
+    invocation_id = str(uuid4())
+    logger.info(invocation_id)
+
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
+        )
+                
+    params = None
+
+    try:
+        data = await request.json()
+        params = CreateDocWorkspaceParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error al recuperar los parámetros, verificar si se indican los parametros necesarios: ID del espacio de trabajo, tipo de ducumento y titulo del documento: {e}"
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+        )
+    location = f'location: {{workspace: {{ workspace_id: "{params.workspace_id}", name: "{params.title}", kind: {params.kind} }} }}'
+    response = None
+    mutation = f"""
+        mutation {{
+            create_doc (
+                {location}
+            ) {{
+                id,
+                url
+            }}
+        }}
+    """
+    logger.info(mutation)
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except Exception as e:
+        logger.info("sin respuesta")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la creación del documento en Monday.com: {e}")]               
+        )
+    try:
+        created = (response or {}).get("data", {}).get("create_doc")
+        logger.info(created)
+    except Exception as e:
+        logger.info("error en el try de created")
+        return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
+    )
+
+    if not created:
+        message = "No se pudo crear el documento en Monday.com."
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )    
+    
+    if not created == None:
+        doc_id = created["id"]
+        url_doc = created["url"]
+        title_doc = params.title
+
+        template = template_env.get_template("response_template_create_doc_by_params.jinja")
+        message = template.render(
+            doc_id = doc_id,
+            url_doc = url_doc,
+            title = title_doc
+        )
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+   
+# monday-create-doc-item-column: Creates a new document by item and column in Monday.com
+@app.post("/monday/doc/create/by_item_column")
+async def create_doc_by_item_column(request: Request) -> OutputModel:
+    """
+        Crea un nuevo documento en Monday.com
+
+        Parámetros de entrada:
+            title (str): Titulo del documento.
+            column_id (str): ID de la columna (la columna tiene que ser del tipo doc).
+            item_id (int): ID de la tarea.
+
+        Retorna:
+            str: Mensaje de confirmación con la URL del documento creado o mensaje del error si la creación falló.
+     """
+
+    invocation_id = str(uuid4())
+    logger.info(invocation_id)
+
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
+        )
+                
+    params = None
+
+    try:
+        data = await request.json()
+        params = CreateDocItemParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error al recuperar los parámetros, verificar si se indican los parametros necesarios: Id de la tarea y Id de la columna: {e}"
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+        )
+    
+    location = f'location: {{board: {{ column_id: "{params.column_id}", item_id: {params.item_id}}} }}' 
+     
+    response = None
+    mutation = f"""
+        mutation {{
+            create_doc (
+                {location}
+            ) {{
+                id,
+                relative_url,
+                url
+            }}
+        }}
+    """
+    logger.info(mutation)
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except Exception as e:
+        logger.info("sin respuesta")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la creación del documento en Monday.com: {e}")]               
+        )
+    try:
+        created = (response or {}).get("data", {}).get("create_doc")
+        logger.info(created)
+    except Exception as e:
+        logger.info("error en el try de created")
+        return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
+    )
+
+    if not created:
+        message = "No se pudo crear el documento en Monday.com."
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )    
+    
+    if not created == None:
+        doc_id = created["id"]
+        url_doc = created["url"]
+        title_doc = params.title
+
+        template = template_env.get_template("response_template_create_doc_by_params.jinja")
+        message = template.render(
+            doc_id = doc_id,
+            url_doc = url_doc,
+            title = title_doc
+        )
+
+    # metodo para asignarle el nombre al archivo - pero no esta respondiendo la api
+    '''
+    mutation = f"""
+        mutation {{
+            update_doc_name (
+                docId: {doc_id}, 
+                name: "{params.title}"
+            )
+        }}
+    """
+    logger.info(mutation)
+    try:
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+    except Exception as e:
+        logger.info("sin respuesta")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la actualizacion de nombre del documento en Monday.com: {e}")]               
+        )
+    try:
+        updated = (response or {}).get("data", {}).get("update_doc_name")
+        logger.info(updated)
+    except Exception as e:
+        logger.info("error en el try de updated")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
+        )
+    '''
+    
+    return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+
 # 23 -  monday-create-column: Crea a Monday.com column
 @app.post("/monday/columns/create")
 async def create_column(request: Request) -> OutputModel:
