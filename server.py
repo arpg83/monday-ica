@@ -563,7 +563,7 @@ async def create_doc(request: Request) -> OutputModel:
     except NameError:
             doc_url = f"(La URL del Espacio de trabajo no está configurada) Doc ID {doc_id}"
 
-    #Hacer Template response_template_doc_create.jinja
+    #Hacer Template response_template_doc_create.jinja ==> simple
 
     message = f"El documento fue creado exitosamente!\nTitulo: {params.title}\nID del documento: {doc_id}\nURL: {doc_url}"
 
@@ -656,7 +656,7 @@ async def create_column(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
 
-    #Hacer Template response_template_column_create.jinja
+    #Hacer Template response_template_column_create.jinja ==> simple
 
     # Generar mensaje de salida
     if column:
@@ -704,7 +704,7 @@ async def listBoards(request: Request) -> OutputModel:
         [f"- {board['name']} (ID: {board['id']})" for board in boards]
     )
     
-    #Hacer Template response_template_boards_list.jinja
+    #Hacer Template response_template_boards_list.jinja ==> medio complejo
     
     message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
 
@@ -766,7 +766,7 @@ async def getBoardGroups(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     
-    #Hacer Template response_template_boards_group_get.jinja
+    #Hacer Template response_template_boards_group_get.jinja ==> simple
 
     message = ""
     if not response is None:
@@ -970,7 +970,7 @@ async def list_subitems_in_items(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message="No se encontraron subtareas en las tareas especificadas.")]
         )
 
-    #Hacer Template response_template_item_list.jinja
+    #Hacer Template response_template_item_list.jinja ==> simple hay que pasar el array de subitems al template
 
     message = f"Subtareas en las Tareas {params.item_ids} :\\n" + "\\n".join(subitems)
 
@@ -1580,7 +1580,7 @@ async def get_board_columns(request: Request) -> OutputModel:
     message = ""
     
     '''          
-    #Hacer Template response_template_columns_get.jinja
+    #hecho Template response_template_columns_get.jinja
     if not response is None:
 
        
