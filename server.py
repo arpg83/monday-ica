@@ -2691,6 +2691,7 @@ async def open_excel(request: Request) -> OutputModel:
 
     return OutputModel(
         invocationId=invocation_id,
+        status="sucess",
         response=[ResponseMessageModel(message=message)]
     )
 
