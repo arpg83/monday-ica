@@ -1,8 +1,3 @@
-# Found {{ count }} user(s):
-# {% for user in users %}
-#  - {{ user.name }} (Email: {{ user.email or 'N/A' }}, Username: {{ user.user_name or 'N/A' }})
-# {% endfor %}
-
 {% if cant_users > 0 %}
 Usuarios disponibles en Monday.com:
 {% for usuario in users %}
