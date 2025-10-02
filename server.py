@@ -28,6 +28,7 @@ from threading import Thread
 # Clase para usar en el template para listar usuarios
 from usuarios_response import Usuario 
 from workspace_response import Workspace 
+from board_response import Board 
 
 load_dotenv()
 hilos = []
@@ -926,26 +927,38 @@ async def listBoards(request: Request) -> OutputModel:
         data = await request.json()
         params = ListBoardsParams(**data)
         response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
-    
-        boards = response["data"]["boards"]
-        board_list = "\n".join(
-            [f"- {board['name']} (ID: {board['id']})" for board in boards]
-        )
+        boards_data = response["data"]["boards"]
         
-        #Hacer Template response_template_boards_list.jinja
-        
-        message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
-
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
     except Exception as e:
         return OutputModel(
             invocationId=invocation_id,
             status="error",
             response=[ResponseMessageModel(message=f"Error al procesar el request: {e}")]
         )
+    
+    # Construir el mensaje de salida
+    boards = []
+    for b in boards_data:
+        board = Workspace()
+        board.id = b["id"]
+        board.name = b["name"]
+        boards.append(board)
+    
+    # Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
+
+    # Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_boards_list.jinja')
+    message = template.render(boards=boards,cant_boards=int(len(boards)))
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 # 7 - monday-get-board-groups: Retrieves all groups from a specified Monday.com board
 @app.get("/monday/board_groups/get")

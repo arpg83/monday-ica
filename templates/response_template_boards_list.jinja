@@ -1,0 +1,9 @@
+{% if cant_boards > 0 %}
+Tableros disponibles en Monday.com:
+{% for board in boards %}
+   ID: {{ board.id }}
+   Nombre: {{ board.name }}
+{% endfor %}
+{% else %}
+No se recuperaron Tableros en Monday.com
+{% endif %}
