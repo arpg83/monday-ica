@@ -96,6 +96,9 @@ class ExcelUtilsMonday:
             if os.path.exists(data_json):
                 logger.info(f"elimina:{data_json}")
                 os.remove(data_json)
+            archivos = os.listdir(self.get_local_uid_path(self.uid))
+            for archivo in archivos:
+                os.remove(f"{self.get_local_uid_path(self.uid)}/{archivo}")
             os.rmdir(self.get_local_uid_path(self.uid))
 
     def get_local_uid_path(self,uid = None):

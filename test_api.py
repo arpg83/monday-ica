@@ -73,6 +73,28 @@ def test_procesa_archivo_excel_url_erronea():
     assert str(response_obj["response"][0]["message"]).startswith("Procesando archivo")
     assert str(response_obj["response"][0]["message"]).find("uid:") > 0
     
+def test_procesa_archivo_excel_archivo_local():
+    json_post = {
+
+        "file_name":r"C:/$user/monday/documento test.xlsx",
+        "download":"false",
+        "rows":"0",
+        "uid":"",
+        "continuar":"False",
+        "esperar":"True"
+    }
+
+
+    response = client.post(url="/monday/read_excel", content= json.dumps(json_post))
+    response_obj = json.load(response)
+
+    # 2. Assert the expected HTTP status code
+    assert response.status_code == 200
+
+    # 3. Assert the expected JSON response body
+    assert response_obj["status"] == "sucess"
+    assert str(response_obj["response"][0]["message"]).startswith("Procesando archivo")
+    assert str(response_obj["response"][0]["message"]).find("uid:") > 0
 
 
 def test_estado_proceso_excel():
