@@ -879,19 +879,21 @@ async def create_column(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
 
-    #Hacer Template response_template_column_create.jinja
-
-    # Generar mensaje de salida
-    if column:
-        message = f"Columna creada en Monday.com con ID: {column['id']}"
+    if not column == None:
+        column_id = column["id"]
+        template = template_env.get_template("response_template_columns_create.jinja")
+        message = template.render(
+            column_id = column_id
+        )
     else:
         message = "No se recibió respuesta de Monday.com al crear la columna."
-
+    
     return OutputModel(
         invocationId=invocation_id,
         status="success",
         response=[ResponseMessageModel(message=message)]
     )
+
 
 #______________________________________________________________________________________________________________
 #___________________________ LIST______________________________________________________________________________
@@ -2138,13 +2140,15 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
     )
 
-    #Hacer Template response_template_doc_add_block.jinja
-    if not block is None:
-        logger.info("Procesa respuesta")
-        message = f"ID del bloque incorporado en Monday.com: {block['id']}"
+    if not block == None:
+        block_id = block["id"]
+        template = template_env.get_template("response_template_add_block.jinja")
+        message = template.render(
+            block_id = block_id
+        )
     else:
-        logger.info("sin respuesta")
-    
+        message="No se pudo agregar el bloque en el documento en Monday.com."
+
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
