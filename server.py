@@ -249,7 +249,7 @@ async def create_item(request: Request) -> OutputModel:
         
     #    message = f"Created new item: in group: {params.group_name} in board: {params.board_id}. ID of the item: {response['data']['create_item']['id']}"
     
-        template = template_env.get_template("response_template_item_created_v2.jinja")
+        template = template_env.get_template("response_template_item_created.jinja")
         message = template.render(
            item_name = params.item_name,
             board_id = params.board_id,
@@ -354,7 +354,7 @@ async def create_update_comment(request: Request) -> OutputModel:
 
     Parámetros de entrada:
         item_id: (str) ID de la tarea que se actualizará
-        update_text: (str) Texto que se desea incluir en la tarea
+        update_value: (str) Texto que se desea incluir en la tarea
 
     Retorna:
         Detalle de la tarea actualizada.
@@ -563,7 +563,7 @@ async def create_doc(request: Request) -> OutputModel:
     except NameError:
             doc_url = f"(La URL del Espacio de trabajo no está configurada) Doc ID {doc_id}"
 
-    #Hacer Template response_template_doc_create.jinja ==> simple
+    #Hacer Template response_template_doc_create.jinja
 
     message = f"El documento fue creado exitosamente!\nTitulo: {params.title}\nID del documento: {doc_id}\nURL: {doc_url}"
 
@@ -571,7 +571,7 @@ async def create_doc(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
-   
+
 # monday-create-doc: Creates a new document by workspace in Monday.com
 @app.post("/monday/doc/create/by_workspace")
 async def create_doc_by_workspace(request: Request) -> OutputModel:
@@ -879,7 +879,7 @@ async def create_column(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
 
-    #Hacer Template response_template_column_create.jinja ==> simple
+    #Hacer Template response_template_column_create.jinja
 
     # Generar mensaje de salida
     if column:
@@ -927,7 +927,7 @@ async def listBoards(request: Request) -> OutputModel:
         [f"- {board['name']} (ID: {board['id']})" for board in boards]
     )
     
-    #Hacer Template response_template_boards_list.jinja ==> medio complejo
+    #Hacer Template response_template_boards_list.jinja
     
     message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
 
@@ -989,7 +989,7 @@ async def getBoardGroups(request: Request) -> OutputModel:
                 response=[ResponseMessageModel(message=message)]
         )
     
-    #Hacer Template response_template_boards_group_get.jinja ==> simple
+    #Hacer Template response_template_boards_group_get.jinja
 
     message = ""
     if not response is None:
@@ -1193,7 +1193,7 @@ async def list_subitems_in_items(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message="No se encontraron subtareas en las tareas especificadas.")]
         )
 
-    #Hacer Template response_template_item_list.jinja ==> simple hay que pasar el array de subitems al template
+    #Hacer Template response_template_item_list.jinja
 
     message = f"Subtareas en las Tareas {params.item_ids} :\\n" + "\\n".join(subitems)
 
@@ -1803,7 +1803,7 @@ async def get_board_columns(request: Request) -> OutputModel:
     message = ""
     
     '''          
-    #hecho Template response_template_columns_get.jinja
+    #Hacer Template response_template_columns_get.jinja
     if not response is None:
 
        
