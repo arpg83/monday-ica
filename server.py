@@ -27,6 +27,7 @@ import json
 from threading import Thread
 # Clase para usar en el template para listar usuarios
 from usuarios_response import Usuario 
+from workspace_response import Workspace 
 
 load_dotenv()
 hilos = []
@@ -1620,21 +1621,25 @@ async def listWorkspaces(request: Request) -> OutputModel:
         )
 
     # Construir el mensaje de salida
-    #Hacer Template response_workspaces_list.jinja
-    if workspaces_data:
-        lines = []
-        for w in workspaces_data:
-            lines.append(
-                f"ID del espacio de trabajo: {w.get('id')}\\n"
-                f"Nombre: {w.get('name')}\\n"
-                f"Descripción: {w.get('description')}\\n"
-                f"Tipo de espacio de trabajo: {w.get('kind')}\\n"
-                "-----\\n"
-            )
-        message = f"Workspaces:\n\n" + "\n".join(lines)
-        #message = "Workspaces:\\n\ " + "\\n".join(lines)
-    else:
-        message = "No se encontraron workspaces en Monday.com."
+    workspaces = []
+    for wsp in workspaces_data:
+        workspace = Workspace()
+        workspace.id = wsp["id"]
+        workspace.name = wsp["name"]
+        workspace.desc = wsp["description"]
+        workspace.kind = wsp["kind"]
+        workspaces.append(workspace)
+    
+    # Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
+
+    # Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_workspace_list.jinja')
+    message = template.render(workspaces=workspaces,cant_workspaces=int(len(workspaces)))
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
 
     return OutputModel(
         invocationId=invocation_id,
