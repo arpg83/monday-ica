@@ -189,7 +189,7 @@ class columnType(BaseModel):
 # 26 - monday-import-info-from-excel: Read excel and create board, group, item, subitem, column containing information from excel rows on Monday.com 
 class OpenExcel(BaseModel):
     file_name:str
-    download:str = "False"
+    download:Optional[str] = "True"
     rows:Optional[int] = 0
     uid:Optional[str] = None
     continuar:Optional[str] = "False"
