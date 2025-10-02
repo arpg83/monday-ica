@@ -2,6 +2,8 @@ from fastapi.testclient import TestClient
 from server import app
 import json
 
+#uv run pytest .\test_api.py -v
+
 client =  TestClient(
     app,
     base_url="http://localhost:10000",
@@ -48,3 +50,40 @@ def test_board_list_parametros_erronesos():
     # 3. Assert the expected JSON response body
     assert response_obj["status"] == "error"
     assert str(response_obj["response"][0]["message"]).startswith("Error al procesar el request:")
+
+def test_estado_proceso_excel():
+    json_post = {
+        "purgar_inactivos":"false",
+        "detener":"false",
+        "purgar_procesos_antiguos":"false",
+        "uid":"d4ab6534-1e36-4be8-8874-1e04f799511b"
+    }
+
+    response = client.post(url="/monday/estado_proceso_excel", content= json.dumps(json_post))
+    response_obj = json.load(response)
+
+    # 2. Assert the expected HTTP status code
+    assert response.status_code == 200
+
+    # 3. Assert the expected JSON response body
+    assert response_obj["status"] == "sucess"
+    assert str(response_obj["response"][0]["message"]).startswith("Procesos activos:")
+
+
+def test_estado_proceso_excel_purga_inactivos():
+    json_post = {
+        "purgar_inactivos":"true",
+        "detener":"false",
+        "purgar_procesos_antiguos":"false",
+        "uid":""
+    }
+
+    response = client.post(url="/monday/estado_proceso_excel", content= json.dumps(json_post))
+    response_obj = json.load(response)
+
+    # 2. Assert the expected HTTP status code
+    assert response.status_code == 200
+
+    # 3. Assert the expected JSON response body
+    assert response_obj["status"] == "sucess"
+    assert str(response_obj["response"][0]["message"]).find("Se purgaron los procesos inactivos") > 0

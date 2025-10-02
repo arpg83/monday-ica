@@ -2588,9 +2588,6 @@ async def estado_proceso(request: Request) -> OutputModel:
         if excel_monday.read_estado():
             informacion_uid = excel_monday.listar_estado_texto()
 
-
-
-    
     template = template_env.get_template("response_template_estado_proceso_excel.jinja")
     cant_procesos = len(hilos)
     message = template.render(
@@ -2604,7 +2601,7 @@ async def estado_proceso(request: Request) -> OutputModel:
     logger.info(message)
     return OutputModel(
             invocationId=invocation_id,
-            status="ok",
+            status="sucess",
             response=[ResponseMessageModel(message=message)]
     )
 
