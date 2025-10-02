@@ -27,6 +27,8 @@ import json
 from threading import Thread
 # Clase para usar en el template para listar usuarios
 from usuarios_response import Usuario 
+from workspace_response import Workspace 
+from board_response import Board 
 
 load_dotenv()
 hilos = []
@@ -879,19 +881,21 @@ async def create_column(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
 
-    #Hacer Template response_template_column_create.jinja
-
-    # Generar mensaje de salida
-    if column:
-        message = f"Columna creada en Monday.com con ID: {column['id']}"
+    if not column == None:
+        column_id = column["id"]
+        template = template_env.get_template("response_template_columns_create.jinja")
+        message = template.render(
+            column_id = column_id
+        )
     else:
         message = "No se recibió respuesta de Monday.com al crear la columna."
-
+    
     return OutputModel(
         invocationId=invocation_id,
         status="success",
         response=[ResponseMessageModel(message=message)]
     )
+
 
 #______________________________________________________________________________________________________________
 #___________________________ LIST______________________________________________________________________________
@@ -923,26 +927,38 @@ async def listBoards(request: Request) -> OutputModel:
         data = await request.json()
         params = ListBoardsParams(**data)
         response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
-    
-        boards = response["data"]["boards"]
-        board_list = "\n".join(
-            [f"- {board['name']} (ID: {board['id']})" for board in boards]
-        )
+        boards_data = response["data"]["boards"]
         
-        #Hacer Template response_template_boards_list.jinja
-        
-        message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
-
-        return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-        )
     except Exception as e:
         return OutputModel(
             invocationId=invocation_id,
             status="error",
             response=[ResponseMessageModel(message=f"Error al procesar el request: {e}")]
         )
+    
+    # Construir el mensaje de salida
+    boards = []
+    for b in boards_data:
+        board = Workspace()
+        board.id = b["id"]
+        board.name = b["name"]
+        boards.append(board)
+    
+    # Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
+
+    # Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_boards_list.jinja')
+    message = template.render(boards=boards,cant_boards=int(len(boards)))
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 # 7 - monday-get-board-groups: Retrieves all groups from a specified Monday.com board
 @app.get("/monday/board_groups/get")
@@ -1618,21 +1634,25 @@ async def listWorkspaces(request: Request) -> OutputModel:
         )
 
     # Construir el mensaje de salida
-    #Hacer Template response_workspaces_list.jinja
-    if workspaces_data:
-        lines = []
-        for w in workspaces_data:
-            lines.append(
-                f"ID del espacio de trabajo: {w.get('id')}\\n"
-                f"Nombre: {w.get('name')}\\n"
-                f"Descripción: {w.get('description')}\\n"
-                f"Tipo de espacio de trabajo: {w.get('kind')}\\n"
-                "-----\\n"
-            )
-        message = f"Workspaces:\n\n" + "\n".join(lines)
-        #message = "Workspaces:\\n\ " + "\\n".join(lines)
-    else:
-        message = "No se encontraron workspaces en Monday.com."
+    workspaces = []
+    for wsp in workspaces_data:
+        workspace = Workspace()
+        workspace.id = wsp["id"]
+        workspace.name = wsp["name"]
+        workspace.desc = wsp["description"]
+        workspace.kind = wsp["kind"]
+        workspaces.append(workspace)
+    
+    # Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
+
+    # Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_workspace_list.jinja')
+    message = template.render(workspaces=workspaces,cant_workspaces=int(len(workspaces)))
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
 
     return OutputModel(
         invocationId=invocation_id,
@@ -2138,13 +2158,15 @@ async def monday_add_doc_block(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
     )
 
-    #Hacer Template response_template_doc_add_block.jinja
-    if not block is None:
-        logger.info("Procesa respuesta")
-        message = f"ID del bloque incorporado en Monday.com: {block['id']}"
+    if not block == None:
+        block_id = block["id"]
+        template = template_env.get_template("response_template_add_block.jinja")
+        message = template.render(
+            block_id = block_id
+        )
     else:
-        logger.info("sin respuesta")
-    
+        message="No se pudo agregar el bloque en el documento en Monday.com."
+
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]

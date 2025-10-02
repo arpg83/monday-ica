@@ -1,0 +1,7 @@
+{% if not error %}
+El bloque fue agregado al documento de forma exitosa!
+ID del Bloque: {{block_id}}
+{% endif %}
+{% if error %}
+No se pudo agregar el bloque en el documento en Monday.com.
+{% endif %}
