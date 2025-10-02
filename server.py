@@ -919,22 +919,30 @@ async def listBoards(request: Request) -> OutputModel:
         response=[ResponseMessageModel(message="Error de conexión con el cliente de Monday: {e}")]
     )
 
-    data = await request.json()
-    params = ListBoardsParams(**data)
-    response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
-    boards = response["data"]["boards"]
-    board_list = "\n".join(
-        [f"- {board['name']} (ID: {board['id']})" for board in boards]
-    )
+    try:
+        data = await request.json()
+        params = ListBoardsParams(**data)
+        response = monday_client.boards.fetch_boards(limit=params.limit, page=params.page)
     
-    #Hacer Template response_template_boards_list.jinja
-    
-    message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
+        boards = response["data"]["boards"]
+        board_list = "\n".join(
+            [f"- {board['name']} (ID: {board['id']})" for board in boards]
+        )
+        
+        #Hacer Template response_template_boards_list.jinja
+        
+        message = "Tableros disponibles en Monday.com: \n %s" % (board_list) 
 
-    return OutputModel(
+        return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message=message)]
+        )
+    except Exception as e:
+        return OutputModel(
             invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-    )
+            status="error",
+            response=[ResponseMessageModel(message=f"Error al procesar el request: {e}")]
+        )
 
 # 7 - monday-get-board-groups: Retrieves all groups from a specified Monday.com board
 @app.get("/monday/board_groups/get")
