@@ -353,8 +353,8 @@ async def create_subitem(request: Request) -> OutputModel:
 @app.put("/monday/comment/update")
 async def create_update_comment(request: Request) -> OutputModel:    
     """
-     Crea una actualización (comentario) sobre una tarea o subtarea de Monday.com
-
+    Crea una actualización (comentario) sobre una tarea o subtarea de Monday.com
+    
     Parámetros de entrada:
         item_id: (str) ID de la tarea que se actualizará
         update_value: (str) Texto que se desea incluir en la tarea
@@ -408,15 +408,7 @@ async def create_update_comment(request: Request) -> OutputModel:
         error = error
     )
 
-#    message = ""
-#    if response is not None:
-#        #Genero el mensaje de salida
-#        logger.info("Procesa respuesta")        
-#        message = f"Se creó una nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com: {response['data']['create_update']['id']}"
-#    else:
-#        logger.info("sin respuesta")
-#        message = f"No se pudo crear la nueva actualización (comentario) en la tarea o subtarea especificada en Monday.com."
-      
+
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
