@@ -350,7 +350,7 @@ async def create_subitem(request: Request) -> OutputModel:
         ) 
 
 # 4 - monday-create-update: Creates a comment/update on a Monday.com item
-@app.put("/monday/comment/update")
+@app.post("/monday/comment/update")
 async def create_update_comment(request: Request) -> OutputModel:    
     """
     Crea una actualización (comentario) sobre una tarea o subtarea de Monday.com
@@ -567,7 +567,7 @@ async def create_doc(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
 
-# monday-create-doc: Creates a new document by workspace in Monday.com
+# 27 - monday-create-doc-by-workspace: Creates a new document by workspace in Monday.com
 @app.post("/monday/doc/create/by_workspace")
 async def create_doc_by_workspace(request: Request) -> OutputModel:
     """
@@ -661,7 +661,7 @@ async def create_doc_by_workspace(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=message)]
         )
    
-# monday-create-doc-item-column: Creates a new document by item and column in Monday.com
+# 28 - monday-create-doc-item-column: Creates a new document by item and column in Monday.com
 @app.post("/monday/doc/create/by_item_column")
 async def create_doc_by_item_column(request: Request) -> OutputModel:
     """
@@ -878,7 +878,7 @@ async def create_column(request: Request) -> OutputModel:
         column_id = column["id"]
         template = template_env.get_template("response_template_columns_create.jinja")
         message = template.render(
-            column_id = column_id
+            column_id = column_id,column_title=params.column_title
         )
     else:
         message = "No se recibió respuesta de Monday.com al crear la columna."

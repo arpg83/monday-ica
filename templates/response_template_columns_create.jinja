@@ -1,7 +1,7 @@
 {% if not error %}
-La columna fue creada de forma exitosa!
-ID de la columna: {{column_id}}
+La columna "{{ column_title }}" fue creada de forma exitosa!
+ID de la columna: {{ column_id }}
 {% endif %}
 {% if error %}
-No se pudo la columna en Monday.com.
+No se pudo crear la columna en Monday.com.
 {% endif %}

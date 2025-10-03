@@ -48,7 +48,7 @@ def test_delete_group_connection_error(monkeypatch):
 # Caso positivo
 def test_delete_item_success(monkeypatch):
     class MockItems:
-        def delete_item(self, item_id):
+        def delete_item_by_id(self, item_id):
             return {"data": {"delete_item": {"id": item_id}}}
 
     class MockMondayClient:
@@ -81,3 +81,6 @@ def test_delete_item_connection_error(monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert any("Error" in msg["message"] for msg in data["response"])
+
+if __name__ == "__main__":
+    pytest.main()    

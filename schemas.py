@@ -53,13 +53,13 @@ class CreateDocParams(BaseModel):
     column_id: Optional[str] = None
     item_id: Optional[str] = None 
 
-# 5a - monday-create-doc-workspace: Creates a new document by workspace in Monday.com 
+# 27 - monday-create-doc-by-workspace: Creates a new document by workspace in Monday.com 
 class CreateDocWorkspaceParams(BaseModel):
     title: str
     workspace_id: str
     kind: str
 
-# 5b - monday-create-doc-item-column: Creates a new document by item and column in Monday.com 
+# 28 - monday-create-doc-item-column: Creates a new document by item and column in Monday.com 
 class CreateDocItemParams(BaseModel):
     title: str
     column_id: str
