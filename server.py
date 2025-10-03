@@ -2677,7 +2677,10 @@ async def open_excel(request: Request) -> OutputModel:
         esperar = este parametro espera un tiempo antes de mandar el siguiente request a monday para evitar errores de conexion debe estar en true para aplicar los tiempos de espera
     """
     
- 
+    # Guardar hora de inicio     
+    start_time = datetime.now()
+    print(f"[INICIO] Ejecución iniciada: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
     invocation_id = str(uuid4())
     
     data = await request.json()
@@ -2711,6 +2714,12 @@ async def open_excel(request: Request) -> OutputModel:
         file_name = params.file_name,
         uid = invocation_id
     )
+
+    # Hora de fin y cálculo de tiempo total
+    end_time = datetime.now()
+    print(f"[FIN] Ejecución finalizada: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Tiempo total: {(end_time - start_time).total_seconds()} segundos")
+    print(f"Tiempo total: {(end_time - start_time)}") #HH:MM:SS
 
     return OutputModel(
         invocationId=invocation_id,
