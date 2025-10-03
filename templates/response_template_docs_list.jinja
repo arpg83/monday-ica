@@ -1,0 +1,13 @@
+{% if cant_documents > 0 %}
+Documentos en Monday.com:
+{% for document in documents %}
+   ID del documento: {{ document.id }}
+   Nombre: {{ document.name }}
+   Creado: {{ document.created_at }}
+   ID del Espacio de trabajo: {{ document.workspace_id }}
+   ID de la carpeta: {{ document.doc_folder_id }}
+   Creado por: {{ document.created_by.name }} (ID usuario: {{ document.created_by.id }} ) 
+{% endfor %}
+{% else %}
+No se recuperaron Documentos en Monday.com
+{% endif %}

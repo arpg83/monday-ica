@@ -29,6 +29,7 @@ from threading import Thread
 from usuarios_response import Usuario 
 from workspace_response import Workspace 
 from board_response import Board 
+from document_response import Document 
 
 load_dotenv()
 hilos = []
@@ -1311,46 +1312,46 @@ async def get_item_updates(request: Request) -> OutputModel:
 # 11 - #monday-get-docs: Lists documents in Monday.com, optionally filtered by folder 
 @app.post("/monday/docs/list")
 async def get_docs(request: Request) -> OutputModel:
-        """        
-        Lista todos los documentos disponibles en Monday.com
+    """        
+    Lista todos los documentos disponibles en Monday.com
 
-        Parámetros de entrada:
-            object_ids List[int]: Lista de los IDs de los documentos a visualizar
-            limit (int): Cantidad máxima de documentos a mostrar
+    Parámetros de entrada:
+        object_ids List[int]: Lista de los IDs de los documentos a visualizar
+        limit (int): Cantidad máxima de documentos a mostrar
 
-        Retorna:
-            str: Lista de documentos legibles
-        """
+    Retorna:
+        str: Lista de documentos legibles
+    """
 
-        invocation_id = str(uuid4())
-        logger.info(invocation_id)
+    invocation_id = str(uuid4())
+    logger.info(invocation_id)
      
-        try:
-            monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        except requests.RequestException as e:
-            return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
-            )            
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
+        )            
         
-        try:
-            data = await request.json()
-            params = GetDocsParams(**data)
-            logger.info(params)
-        except Exception as e:
-                message = f"Error al recuperar los parámetros, verifique que existan documentos en Monday.com:: {e}"
-                logger.info("Error with params")
-                return OutputModel(
-                        invocationId=invocation_id,
-                        status="error",
-                        response=[ResponseMessageModel(message=message)]
-                )
-        response = None        
+    try:
+        data = await request.json()
+        params = GetDocsParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error al recuperar los parámetros, verifique que existan documentos en Monday.com:: {e}"
+        logger.info("Error with params")
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+        )
+    response = None        
 
-        # Query GraphQL para traer los docs
-        query = f"""
+    # Query GraphQL para traer los docs
+    query = f"""
         query {{
-            docs (object_ids: {params.object_ids}, limit: {params.limit}) {{
+            docs (limit: {params.limit}) {{
                 id
                 name
                 created_at
@@ -1364,53 +1365,53 @@ async def get_docs(request: Request) -> OutputModel:
         }}
         """
         
-        try:
-            response = monday_client.custom._query(query)
-            logger.info(response)
-        except requests.RequestException as e:
-           logger.info("sin respuesta")
-           return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la lista de documentos disponibles en Monday.com: {e}")]               
-            )
+    try:
+        response = monday_client.custom._query(query)
+        logger.info(response)
+    except requests.RequestException as e:
+        logger.info("sin respuesta")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar la lista de documentos disponibles en Monday.com: {e}")]               
+        )
               
-        try:
-            docs = (response or {}).get("data", {}).get("docs", [])            
-            logger.info(docs)
-        except Exception as e:
-            logger.info("error en el try de docs")
-            return OutputModel(
+    try:
+        docs_data = (response or {}).get("data", {}).get("docs", [])            
+        logger.info(docs_data)
+    except Exception as e:
+        logger.info("error en el try de docs")
+        return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
         )
+
+    # Construir el mensaje de salida
+    documents = []
+    for d in docs_data:
+        document = Document()
+        document.id = d["id"]
+        document.name = d["name"]
+        document.created_at = d["created_at"]
+        document.workspace_id = d["workspace_id"]
+        document.doc_folder_id = d["doc_folder_id"]
+        document.created_by = d["created_by"]
+        documents.append(document)
     
-        if not docs:
-            return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message="No se encontraron documentos para listar en Monday.com.")]
-            )
-        
-        #Hacer Template response_template_docs_list.jinja (Es complejo para la parametria)
+    # Configurar el entorno de plantillas de Jinja2
+    file_loader = FileSystemLoader(searchpath="./")
+    env = Environment(loader=file_loader)
 
-        # Procesar respuesta
-        lines = []
-        for d in docs:
-            lines.append(
-                f"ID del documento: {d['id']}\n"
-                f"Nombre: {d['name']}\n"
-                f"Creado: {d['created_at']}\n"
-                f"ID del espacio de trabajo: {d['workspace_id']}\n"
-                f"ID de la carpeta: {d.get('doc_folder_id','None')}\n"
-                f"Creado por: {d['created_by']['name']} (ID: {d['created_by']['id']})\n"
-                "-----\n"
-            )
-        
-        message = f"Documentos:\n\n" + "\n".join(lines)
+    # Renderizar la plantilla con los datos
+    template = env.get_template('templates/response_template_docs_list.jinja')
+    message = template.render(documents=documents,cant_documents=int(len(documents)))
 
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=message)]
-        )
+    # Imprimir el mensaje resultante
+    logger.info(message)
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 # 12 - #monday-get-doc-content: Retrieves the content of a specific document
 @app.post("/monday/doc_content/get")
