@@ -938,11 +938,9 @@ async def listBoards(request: Request) -> OutputModel:
         boards.append(board)
     
     # Configurar el entorno de plantillas de Jinja2
-    file_loader = FileSystemLoader(searchpath="./")
-    env = Environment(loader=file_loader)
 
     # Renderizar la plantilla con los datos
-    template = env.get_template('templates/response_template_boards_list.jinja')
+    template = template_env.get_template('response_template_boards_list.jinja')
     message = template.render(boards=boards,cant_boards=int(len(boards)))
 
     # Imprimir el mensaje resultante
@@ -954,7 +952,7 @@ async def listBoards(request: Request) -> OutputModel:
     )
 
 # 7 - monday-get-board-groups: Retrieves all groups from a specified Monday.com board
-@app.get("/monday/board_groups/get")
+@app.post("/monday/board_groups/get")
 async def getBoardGroups(request: Request) -> OutputModel:
     """
     Lista los grupos de un tablero de Monday.com
@@ -995,7 +993,7 @@ async def getBoardGroups(request: Request) -> OutputModel:
     try:
         #llamada al servicio de monday
         response = monday_client.groups.get_groups_by_board(board_ids=params.board_id)
-
+        
         #Imprimo la respuesta
         logger.info(response)
 
@@ -1005,24 +1003,24 @@ async def getBoardGroups(request: Request) -> OutputModel:
                 invocationId=invocation_id,
                 response=[ResponseMessageModel(message=message)]
         )
-    
-    #Hacer Template response_template_boards_group_get.jinja
+ 
+    # Construir el mensaje de salida 
+    boards_data = (response.get("data") or {}).get("boards", [])
+    groups = []
+    for board in boards_data:
+        for g in board.get("groups", []):
+            groups.append({
+                "id": g.get("id"),
+                "title": g.get("title")
+            })
 
-    message = ""
-    if not response is None:
-        #Genero el mensaje de salida
-        logger.info("Procesa respuesta")        
-       
-        message = f"Grupos disponibles en un tablero especificado de Monday.com: \n %s" % (response['data']) 
-
-    else:
-        logger.info("sin respuesta")
-        message = "Error de respuesta al solicitar la lista de grupos que posee el tablero especificados en Monday.com:"
+    template = template_env.get_template("response_template_get_groups_by_board.jinja")
+    message = template.render(groups=groups, cant_groups=len(groups))
 
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
-        ) 
+    )
         
 # 8 - monday-list-items-in-groups: Lists all items in specified groups of a Monday.com board
 @app.post("/monday/item_in_group/list")
@@ -1390,11 +1388,9 @@ async def get_docs(request: Request) -> OutputModel:
         documents.append(document)
     
     # Configurar el entorno de plantillas de Jinja2
-    file_loader = FileSystemLoader(searchpath="./")
-    env = Environment(loader=file_loader)
 
     # Renderizar la plantilla con los datos
-    template = env.get_template('templates/response_template_docs_list.jinja')
+    template = template_env.get_template('response_template_docs_list.jinja')
     message = template.render(documents=documents,cant_documents=int(len(documents)))
 
     # Imprimir el mensaje resultante
@@ -1563,11 +1559,9 @@ async def listUsers() -> OutputModel:
         usuarios.append(usuario)
 
     # Configurar el entorno de plantillas de Jinja2
-    file_loader = FileSystemLoader(searchpath="./")
-    env = Environment(loader=file_loader)
-
+ 
     # Renderizar la plantilla con los datos
-    template = env.get_template('templates/response_template_users.jinja')
+    template = template_env.get_template('response_template_users.jinja')
 
     message = template.render(users=usuarios,cant_users=int(len(usuarios)))
 
@@ -1637,11 +1631,9 @@ async def listWorkspaces(request: Request) -> OutputModel:
         workspaces.append(workspace)
     
     # Configurar el entorno de plantillas de Jinja2
-    file_loader = FileSystemLoader(searchpath="./")
-    env = Environment(loader=file_loader)
 
     # Renderizar la plantilla con los datos
-    template = env.get_template('templates/response_template_workspace_list.jinja')
+    template = template_env.get_template('response_template_workspace_list.jinja')
     message = template.render(workspaces=workspaces,cant_workspaces=int(len(workspaces)))
 
     # Imprimir el mensaje resultante
