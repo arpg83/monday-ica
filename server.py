@@ -30,7 +30,8 @@ from usuarios_response import Usuario
 from workspace_response import Workspace 
 from board_response import Board 
 from document_response import Document
-from block_response import Block 
+from block_response import Block
+from item_update_response import ItemUpdate 
 
 load_dotenv()
 hilos = []
@@ -1258,8 +1259,6 @@ async def get_item_updates(request: Request) -> OutputModel:
                 status="error",
                 response=[ResponseMessageModel(message=message)]
         )
-    
-    #Hacer Template response_template_get_item_updates.jinja  (Es bastante complejo)
 
     message = ""
     if response is not None:
@@ -1288,6 +1287,30 @@ async def get_item_updates(request: Request) -> OutputModel:
     else:
         logger.info("sin respuesta")    
         message = f"No se encontraron actualizaciones asociadas a la tarea especificada."
+
+    # Construir el mensaje de salida
+    items = response['data']['items']
+    items_data = items[0]['updates']
+    updates = []
+    for upd in items_data:
+        item_update = ItemUpdate()
+        item_update.id = upd["id"]
+        item_update.content = upd["body"]
+        created_at_string = upd["created_at"]
+        created_at_date = datetime.strptime(created_at_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+        item_update.created_at = created_at_date
+        updated_at_string = upd["updated_at"]
+        item_update.updated_at = datetime.strptime(updated_at_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+        item_update.creator = upd["creator"]
+        updates.append(item_update)
+
+    # Renderizar la plantilla con los datos
+    template = template_env.get_template('response_template_item_comment_update.jinja')
+    message = template.render(updates=updates,cant_updates=int(len(updates)), item_id=params.item_id)
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
+    
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
