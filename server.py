@@ -1910,17 +1910,6 @@ async def update_item(request: Request) -> OutputModel:
         ,sin_respuesta = sin_respuesta
     )
 
-#    message = ""
-    #Hacer Template response_template_item_update.jinja ==> Template armado testear Eliminar comentarios luego de testear
-#    if not response is None:
-#        #Genero el mensaje de salida
-#        logger.info("Procesa respuesta")        
-#        message = f"Tarea de Monday.com actualizada. {response['data']['change_multiple_column_values']['id']}"
-#        # message = f"Updated Monday.com item. {params.item_id} en el tablero cuyo ID es: : {params.board_id}."  
-#        # Faltan los valores de las columnas 
-#    else:
-#        logger.info("sin respuesta")
-
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
