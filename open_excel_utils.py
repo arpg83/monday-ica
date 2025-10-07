@@ -216,7 +216,10 @@ class ExcelUtilsMonday:
             logger.info(f"Retorna pandas:{file_path}")
             #logger.info(df)
             #logger.info(df.columns.values)
-            return df
+            if self.validar_archivo_excel(df):
+                return df
+            else:
+                return None
 
     def list_columns(self,df:pd.DataFrame):
         """lista columnas del documento pandas/excel"""
@@ -224,19 +227,26 @@ class ExcelUtilsMonday:
 
     def read_cell(self,df:pd.DataFrame,column_name,row_id):
         """Lee una celda especifica"""
+        if row_id < 0 or row_id >= len(df):
+            return None
         arr_cols = df.columns.values
         logger.info("cantidad columnas")
         logger.info(len(arr_cols))
         if len(arr_cols) > 0:
-            index_col = 0
-            for index,col in enumerate(arr_cols):
-                logger.debug(index)
-                logger.debug(col)
-                if col == column_name:
-                    index_col = index
-            logger.debug(row_id)
-            logger.debug(index_col)
-            return df.iloc[row_id,index_col]
+            #index_col = -1
+            index_col = next((index for index, col in enumerate(arr_cols) if col == column_name), -1)
+     
+            #for index,col in enumerate(arr_cols):
+            #    logger.debug(index)
+            #    logger.debug(col)
+            #    if col == column_name:
+            #        index_col = index
+            #logger.debug(row_id)
+            #logger.debug(index_col)
+            if index_col < 0:
+                return None
+            else:
+                return df.iloc[row_id,index_col]
         else:
             return None
 
@@ -307,6 +317,25 @@ class ExcelUtilsMonday:
             return True
         return False
 
+    def validar_archivo_excel(self,df):
+        """Valida si el archivo excel posee todas las columnas requeridas"""
+        required_columns = [
+            self.titulo_column_name,
+            self.fecha_inicio_column_name,
+            self.fecha_fin_column_name,
+            self.nivel_column_name
+        ]
+
+        if not all(col in df.columns for col in required_columns):
+            self.error = True
+            self.message = "Columnas requeridas no encontradas en el Excel"
+            missing = [col for col in required_columns if col not in df.columns]
+            self.message = f"Columnas requeridas faltantes: {', '.join(missing)}"
+            return False
+        else:
+            return True
+
+
     def identify_type(self,outline_lvl):
         """Identifica si la fila es un board, grupo, item o subitem"""
         if str(outline_lvl).strip() == '1':
@@ -327,23 +356,26 @@ class ExcelUtilsMonday:
         if str(outline_lvl).strip() == '7':
             return 'subiteml4'#column
         return 'undefined'
-    
+
     def parse_date(self,fecha:str):
         """parsea una fecha"""
         logger.info(fecha)
         logger.info(self.format_fecha_string)
-        try:
-            dt_fecha = datetime.strptime(f"{fecha}",self.format_fecha_string)
-            time_delta = timedelta(hours=3)
-            dt_fecha = dt_fecha + time_delta
-            resp_fecha = str(dt_fecha)
-            logger.info(resp_fecha)
-            return resp_fecha
-        except Exception as e:
-            logger.error(str(e))
-            logger.info(f"no se pudo parsear la fecha {fecha}")
+        if fecha is not None:
+            try:
+                dt_fecha = datetime.strptime(f"{fecha}",self.format_fecha_string)
+                time_delta = timedelta(hours=3)
+                dt_fecha = dt_fecha + time_delta
+                resp_fecha = str(dt_fecha)
+                logger.info(resp_fecha)
+                return resp_fecha
+            except Exception as e:
+                logger.error(str(e))
+                logger.info(f"no se pudo parsear la fecha {fecha}")
+                return None
+        else:
             return None
-    
+  
     def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
         self.error = False
@@ -352,9 +384,9 @@ class ExcelUtilsMonday:
         #Actualmente sobrescribe el archivo si continua
         logger.info(download)
         df = self.get_pandas(filename,download,uid)
-        if self.error:
+        if self.error or df is None:
             self.salvar_estado(self.error)
-        else:    
+        else:
             logger.info(self.list_columns(df))
             logger.info(uid)
             cant_total_filas = len(df.index)
@@ -612,34 +644,36 @@ class ExcelUtilsMonday:
     
     def analizar_excel(self,filename, download ,uid = None):
         """Analiza los niveles de profundidad del archivo excel"""
-        df = self.get_pandas(filename,download,uid)
-        cant_total_filas = len(df.index)
-        analisis_item = AnalisisItem()
-        primer_item = True
         arr_analisis_items = []
-        for i in range(cant_total_filas):
-            self.pos = i
-            title = self.read_cell(df,"Name",i)
-            outline_lvl = self.read_cell(df,"Outline Level",i)
-            tipo = self.identify_type(outline_lvl)
-            logger.debug(tipo)
-            logger.debug(outline_lvl)
-            if tipo == 'item':
-                if not primer_item and analisis_item.max_outline > 4:
-                    analisis_item.row_fin = i -1
-                    arr_analisis_items.append(analisis_item)
+        if os.path.exists(filename):
+            df = self.get_pandas(filename,download,uid)
+            if df is not None:
+                cant_total_filas = len(df.index)
                 analisis_item = AnalisisItem()
-                analisis_item.row_inicio = i
-                primer_item = False
-                analisis_item.item_name = title
-                analisis_item.max_outline = int(outline_lvl)
-            else:
-                if not primer_item and int(analisis_item.max_outline) < int(outline_lvl):
-                    analisis_item.max_outline = int(outline_lvl)
-        for obj in arr_analisis_items:
-            analisis:AnalisisItem = obj
-            logger.debug(analisis.get_log())
-        self.proceso_completo = True
+                primer_item = True
+                for i in range(cant_total_filas):
+                    self.pos = i
+                    title = self.read_cell(df,"Name",i)
+                    outline_lvl = self.read_cell(df,"Outline Level",i)
+                    tipo = self.identify_type(outline_lvl)
+                    logger.debug(tipo)
+                    logger.debug(outline_lvl)
+                    if tipo == 'item':
+                        if not primer_item and analisis_item.max_outline > 4:
+                            analisis_item.row_fin = i -1
+                            arr_analisis_items.append(analisis_item)
+                        analisis_item = AnalisisItem()
+                        analisis_item.row_inicio = i
+                        primer_item = False
+                        analisis_item.item_name = title
+                        analisis_item.max_outline = int(outline_lvl)
+                    else:
+                        if not primer_item and int(analisis_item.max_outline) < int(outline_lvl):
+                            analisis_item.max_outline = int(outline_lvl)
+                for obj in arr_analisis_items:
+                    analisis:AnalisisItem = obj
+                    logger.debug(analisis.get_log())
+                self.proceso_completo = True
         return arr_analisis_items
 
 class Hilo():
