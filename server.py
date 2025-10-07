@@ -480,7 +480,8 @@ async def create_doc(request: Request) -> OutputModel:
             create_doc (
                 {location}
             ) {{
-                id
+                id,
+                url
             }}
         }}
     """
@@ -510,18 +511,6 @@ async def create_doc(request: Request) -> OutputModel:
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )    
-       
-     # Procesar respuesta 
-
-    try:
-        monday_workspace_name = MondayClient(os.getenv("MONDAY_WORKSPACE_NAME"))
-    except requests.RequestException as e:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
-        )
-    
-    doc_id = created["id"]
 
     # metodo para asignarle el nombre al archivo - pero no esta respondiendo la api
     '''
@@ -553,15 +542,20 @@ async def create_doc(request: Request) -> OutputModel:
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
         )
     '''
-    try:
-            monday_url = os.getenv("MONDAY_WORKSPACE_URL")
-            doc_url = f"{monday_url}/docs/{doc_id}"
-    except NameError:
-            doc_url = f"(La URL del Espacio de trabajo no está configurada) Doc ID {doc_id}"
+    
+    if not created == None:
+        doc_id = created["id"]
+        url_doc = created["url"]
+        title_doc = params.title
 
-    #Hacer Template response_template_doc_create.jinja
+        template = template_env.get_template("response_template_create_doc_by_params.jinja")
+        message = template.render(
+            doc_id = doc_id,
+            url_doc = url_doc,
+            title = title_doc
+        )
 
-    message = f"El documento fue creado exitosamente!\nTitulo: {params.title}\nID del documento: {doc_id}\nURL: {doc_url}"
+    logger.info(message)
 
     return OutputModel(
             invocationId=invocation_id,
@@ -657,6 +651,7 @@ async def create_doc_by_workspace(request: Request) -> OutputModel:
             url_doc = url_doc,
             title = title_doc
         )
+    logger.info(message)
     return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
