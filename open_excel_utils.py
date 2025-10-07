@@ -37,7 +37,8 @@ class ExcelUtilsWorks:
     def listar(self):
         """lista los uid del directorio de procesamiento"""
         arr = []
-        arr = os.listdir(self.directorio)
+        if self.directorio is not None and os.path.exists(self.directorio):
+            arr = os.listdir(self.directorio)
         return arr
     
     def purgar(self,uid):
