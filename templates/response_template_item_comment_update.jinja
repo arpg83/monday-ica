@@ -1,0 +1,14 @@
+ID de la Tarea: {{ item_id }}
+
+{% if cant_updates > 0 %}
+Actualizaciones de la Tarea:
+{% for upd in updates %}
+   ID de la Actualizacion: {{ upd.id }}
+   Actualizacion: {{ upd.content }}
+   Creado: {{ upd.created_at }}
+   Modificado: {{ upd.updated_at }}
+   Creado por: {{ upd.creator.name }} (ID usuario: {{ upd.creator.id }} ) 
+{% endfor %}
+{% else %}
+La Tarea no contiene actualizaciones.
+{% endif %}
