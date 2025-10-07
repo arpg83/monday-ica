@@ -933,8 +933,6 @@ async def listBoards(request: Request) -> OutputModel:
         board.name = b["name"]
         boards.append(board)
     
-    # Configurar el entorno de plantillas de Jinja2
-
     # Renderizar la plantilla con los datos
     template = template_env.get_template('response_template_boards_list.jinja')
     message = template.render(boards=boards,cant_boards=int(len(boards)))
@@ -1383,8 +1381,6 @@ async def get_docs(request: Request) -> OutputModel:
         document.created_by = d["created_by"]
         documents.append(document)
     
-    # Configurar el entorno de plantillas de Jinja2
-
     # Renderizar la plantilla con los datos
     template = template_env.get_template('response_template_docs_list.jinja')
     message = template.render(documents=documents,cant_documents=int(len(documents)))
@@ -1567,8 +1563,6 @@ async def listUsers() -> OutputModel:
         usuario.teams = user["teams"]
         usuarios.append(usuario)
 
-    # Configurar el entorno de plantillas de Jinja2
- 
     # Renderizar la plantilla con los datos
     template = template_env.get_template('response_template_users.jinja')
 
@@ -1639,8 +1633,6 @@ async def listWorkspaces(request: Request) -> OutputModel:
         workspace.kind = wsp["kind"]
         workspaces.append(workspace)
     
-    # Configurar el entorno de plantillas de Jinja2
-
     # Renderizar la plantilla con los datos
     template = template_env.get_template('response_template_workspace_list.jinja')
     message = template.render(workspaces=workspaces,cant_workspaces=int(len(workspaces)))
