@@ -1,0 +1,12 @@
+ID del Documento: {{ document.id }}
+Nombre: {{ document.name }}
+{% if cant_blocks > 0 %}
+Contenido del Documento:
+{% for block in blocks %}
+   ID del bloque: {{ block.id }}
+   Tipo: {{ block.type }}
+   Contenido: {{ block.content }}
+{% endfor %}
+{% else %}
+El Documento no contiene bloques.
+{% endif %}

@@ -29,7 +29,8 @@ from threading import Thread
 from usuarios_response import Usuario 
 from workspace_response import Workspace 
 from board_response import Board 
-from document_response import Document 
+from document_response import Document
+from block_response import Block 
 
 load_dotenv()
 hilos = []
@@ -1404,45 +1405,45 @@ async def get_docs(request: Request) -> OutputModel:
 # 12 - #monday-get-doc-content: Retrieves the content of a specific document
 @app.post("/monday/doc_content/get")
 async def get_doc_content(request: Request) -> OutputModel:
-        """
-        Lista el contenido de los bloques que posee un documento de Monday.com
+    """
+    Lista el contenido de los bloques que posee un documento de Monday.com
 
-        Parámetros de entrada:
-            doc_id (str): ID del documento
+    Parámetros de entrada:
+        doc_id (str): ID del documento
 
-        Retorna:
-            str: Lista con el contenido del documento.
-        """
-        invocation_id = str(uuid4())
-        logger.info(invocation_id)
+    Retorna:
+        str: Lista con el contenido del documento.
+    """
+    invocation_id = str(uuid4())
+    logger.info(invocation_id)
 
-        try:
-            monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
-        except requests.RequestException as e:
-            return OutputModel(
+    try:
+        monday_client = MondayClient(os.getenv("MONDAY_API_KEY"))
+    except requests.RequestException as e:
+        return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error de conexión con el cliente de Monday: {e}")]
         )
                 
-        params = None
+    params = None
 
-        try:
-            data = await request.json()
-            params = GetDocContentParams(**data)
-            logger.info(params)
-        except Exception as e:
-            message = f"Error al recuperar los parámetros, verifique que el ID del documento proporcionado, exista en Monday.com: {e}"
-            logger.info("Error with params")
-            return OutputModel(
-                    invocationId=invocation_id,
-                    status="error",
-                    response=[ResponseMessageModel(message=message)]
-            )
+    try:
+        data = await request.json()
+        params = GetDocContentParams(**data)
+        logger.info(params)
+    except Exception as e:
+        message = f"Error al recuperar los parámetros, verifique que el ID del documento proporcionado, exista en Monday.com: {e}"
+        logger.info("Error with params")
+        return OutputModel(
+            invocationId=invocation_id,
+            status="error",
+            response=[ResponseMessageModel(message=message)]
+        )
         
-        response = None
+    response = None
 
-         # Query GraphQL para traer los docs        
-        query = f"""
+    # Query GraphQL para traer los docs        
+    query = f"""
         query {{
             docs (ids: {params.doc_id}) {{
                 id
@@ -1454,67 +1455,80 @@ async def get_doc_content(request: Request) -> OutputModel:
                 }}
             }}
         }}
-        """
-        try:
-            response = monday_client.custom._query(query)
-            logger.info(response)
-        except requests.RequestException as e:
-           logger.info("sin respuesta")
-           return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=f"Error de respuesta al solicitar el contenido del documento en Monday.com: {e}")]               
-            )
+    """
+    try:
+        response = monday_client.custom._query(query)
+        logger.info(response)
+    except requests.RequestException as e:
+        logger.info("sin respuesta")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error de respuesta al solicitar el contenido del documento en Monday.com: {e}")]               
+        )
 
-        try:
-            docs = (response or {}).get("data", {}).get("docs", [])
-            logger.info(docs)
-        except Exception as e:
-            logger.info("error en el try de docs")
-            return OutputModel(
+    try:
+        docs = (response or {}).get("data", {}).get("docs", [])
+        logger.info(docs)
+    except Exception as e:
+        logger.info("error en el try de docs")
+        return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
         )
     
-        if not docs:
+    if not docs:
 
-            message = f"No se pudo localizar el documento cuyo ID es: {params.doc_id} "
-            return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-            )
-        
-        doc = docs[0]
-        
-        try:
-            blocks = doc.get("blocks", [])
-            logger.info(blocks)
-        except Exception as e:
-            logger.info("error en el try de blocks")
-            return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
-        )       
-           
-        if not blocks:
-            message = f"El documento: {doc['name']} cuyo ID es: (ID: {doc['id']}) no contiene bloques."            
-            return OutputModel(
-                invocationId=invocation_id,
-                response=[ResponseMessageModel(message=message)]
-            )
-
-         # Procesar respuesta 
-         #Hacer Template response_template_doc_content_get.jinja
-
-        lines = [f"Document {doc['name']} (ID: {doc['id']}):\n\nBlocks:"]
-        for b in blocks:
-            lines.append(f"- Block ID: {b['id']} | Type: {b['type']} | Content: {b['content']}")
-
-        message = f"Documentos:\n\n" + "\n".join(lines)
-
+        message = f"No se pudo localizar el documento cuyo ID es: {params.doc_id} "
         return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=message)]
         )
+        
+    doc = docs[0]
+        
+    try:
+        blocks_data = doc.get("blocks", [])
+        logger.info(blocks_data)
+    except Exception as e:
+        logger.info("error en el try de blocks")
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]            
+        )       
+           
+    if not blocks_data:
+        message = f"El documento: {doc['name']} cuyo ID es: (ID: {doc['id']}) no contiene bloques."            
+        return OutputModel(
+            invocationId=invocation_id,
+            response=[ResponseMessageModel(message=message)]
+        )
+    
+    # Construir el mensaje de salida
+    blocks = []
+    for bd in blocks_data:
+        block = Block()
+        block.id = bd["id"]
+        block.type = bd["type"]
+        content_string = bd["content"]
+        content_body = json.loads(content_string)
+        content_insert = content_body.get("deltaFormat")
+        if content_insert:
+            block.content = content_insert[0]['insert']
+        else:
+            block.content = ""
+        blocks.append(block)
+
+    # Renderizar la plantilla con los datos
+    template = template_env.get_template('response_template_doc_content.jinja')
+    message = template.render(blocks=blocks,cant_blocks=int(len(blocks)),document=doc)
+
+    # Imprimir el mensaje resultante
+    logger.info(message)
+
+    return OutputModel(
+        invocationId=invocation_id,
+        response=[ResponseMessageModel(message=message)]
+    )
 
 # 13 - monday-list-users: Lists all available Monday.com users
 @app.get("/monday/users/list")
