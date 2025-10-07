@@ -1815,8 +1815,7 @@ async def get_board_columns(request: Request) -> OutputModel:
                                 pass
     message = ""
     
-    '''          
-    #Hacer Template response_template_columns_get.jinja
+    '''
     if not response is None:
 
        
