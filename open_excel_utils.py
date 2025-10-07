@@ -84,7 +84,12 @@ class ExcelUtilsMonday:
     procesando = True
     sub_board_columns_creadas = False
     format_fecha_string = "%B %d, %Y %I:%M %p"
+    #Esto permite que los niveles 5 en adelante se carguen como subitems si se setea esta variable como true
     cargar_lvl_superirores_a_como_subitems = False
+    titulo_column_name = "Name"
+    fecha_inicio_column_name = "Start"
+    fecha_fin_column_name = "Finish"
+    nivel_column_name = "Outline Level"
 
     def __init__(self):
         self.local_filename = ""
@@ -115,39 +120,52 @@ class ExcelUtilsMonday:
         self.sub_board_columns_creadas = False
         self.format_fecha_string = "%B %d, %Y %I:%M %p"
         self.cargar_lvl_superirores_a_como_subitems = False
+        self.titulo_column_name = "Name"
+        self.fecha_inicio_column_name = "Start"
+        self.fecha_fin_column_name = "Finish"
+        self.nivel_column_name = "Outline Level"
 
 
-    def clean_files(self):
+    def clean_files(self,purga_completa = True):
         """Limpia los archivos"""
         if self.proceso_completo:
-            if self.local_filename != "" and  os.path.exists(self.local_filename):
+            if self.local_filename is not None and  self.local_filename != "" and  os.path.exists(self.local_filename):
                 logger.info(f"Eliminado:{self.local_filename}")
                 os.remove(self.local_filename)
             logger.info(self.get_local_uid_path(self.uid))
             #Borrar data.json
             data_json = f'{self.get_local_uid_path(self.uid)}/data.json'
-            if os.path.exists(data_json):
+            if self.uid is not None and self.uid != "" and os.path.exists(data_json):
                 logger.info(f"elimina:{data_json}")
                 os.remove(data_json)
-            archivos = os.listdir(self.get_local_uid_path(self.uid))
-            for archivo in archivos:
-                os.remove(f"{self.get_local_uid_path(self.uid)}/{archivo}")
-            os.rmdir(self.get_local_uid_path(self.uid))
+
+            #proceso para purgar completamente el directorio
+            if purga_completa and self.uid is not None and self.uid != "" and self.proceso_completo:
+                archivos = os.listdir(self.get_local_uid_path(self.uid))
+                for archivo in archivos:
+                    os.remove(f"{self.get_local_uid_path(self.uid)}/{archivo}")
+                os.rmdir(self.get_local_uid_path(self.uid))
 
     def get_local_uid_path(self,uid = None):
         """Obtiene el path desde el uid"""
-        dir_procesa = 'procesa_archivos'
-        if not os.path.exists(dir_procesa):
-            os.mkdir(dir_procesa)
-        dir_uid = f"{dir_procesa}/{uid}"
-        if not os.path.exists(dir_uid):
-            os.mkdir(dir_uid)
-        return dir_uid
+        if uid is not None and  uid != "":
+            dir_procesa = 'procesa_archivos'
+            if not os.path.exists(dir_procesa):
+                os.mkdir(dir_procesa)
+            dir_uid = f"{dir_procesa}/{uid}"
+            if not os.path.exists(dir_uid):
+                os.mkdir(dir_uid)
+            return dir_uid
+        else:
+            return None
 
-    def get_local_fileName(self,uid = None,filename = "archivo.xlsx"):
+    def get_local_file_name(self,uid = None,filename = "archivo.xlsx"):
         """Obtiene el path del archivo local"""
-        dir_uid = self.get_local_uid_path(uid)
-        return f"{dir_uid}/{filename}"
+        if uid is not None and  uid != "":
+            dir_uid = self.get_local_uid_path(uid)
+            return f"{dir_uid}/{filename}"
+        else:
+            return None
 
     def download_file(self,url, local_filename):
         """Descarga un archivo desde internet"""
@@ -173,14 +191,14 @@ class ExcelUtilsMonday:
             file_path = filename
             self.uid = uid
             if self.download:
-                file_path= self.get_local_fileName(uid,"archivo.xlsx")
+                file_path= self.get_local_file_name(uid,"archivo.xlsx")
                 
                 if not self.download_file(filename,file_path):
                     self.error = True
                     self.message = "No se pudo descargar el archivo"
                 logger.info(f"descarga {filename} {file_path}")
             else:
-                file_path= self.get_local_fileName(uid,"archivo.xlsx")
+                file_path= self.get_local_file_name(uid,"archivo.xlsx")
                 shutil.copy(filename,file_path)
             self.local_filename = file_path
             return self.local_filename
@@ -254,7 +272,6 @@ class ExcelUtilsMonday:
         logger.info(message)
         return message
 
-
     def read_estado(self):
         """Recupera el estado del proceso del archivo json data.json"""
         path = f'{self.get_local_uid_path(self.uid)}/data.json'
@@ -327,7 +344,6 @@ class ExcelUtilsMonday:
             logger.info(f"no se pudo parsear la fecha {fecha}")
             return None
     
-
     def process_excel_monday(self,filename, download:bool , monday_client:MondayClient,uid = None,rows=0,continuar:bool = False):
         """Procesa el excel de monday si se le da una url asignar el parametro download = True, si se desea procesar una cantidad limitada de filas asignar un valor a rows si el valor es 0 procesara todo el documento"""
         self.error = False
@@ -368,12 +384,12 @@ class ExcelUtilsMonday:
                 for i in range(cantidad_a_procesar):
                     if not continuar or (continuar and i > self.pos):
                         self.pos = i
-                        title = self.read_cell(df,"Name",i)
-                        dt_inicio = self.read_cell(df,"Start",i)
-                        dt_fin = self.read_cell(df,"Finish",i)
+                        title = self.read_cell(df,self.titulo_column_name,i)
+                        dt_inicio = self.read_cell(df,self.fecha_inicio_column_name,i)
+                        dt_fin = self.read_cell(df,self.fecha_fin_column_name,i)
                         fecha_inicio = self.parse_date(dt_inicio)
                         fecha_fin = self.parse_date(dt_fin)
-                        outline_lvl = self.read_cell(df,"Outline Level",i)
+                        outline_lvl = self.read_cell(df,self.nivel_column_name,i)
                         message = f"Row: {i}"
                         logger.info(message)
                         logger.info(title)
@@ -381,8 +397,8 @@ class ExcelUtilsMonday:
                         logger.info(self.identify_type(outline_lvl))
                         if self.identify_type(outline_lvl) == 'board':
                             self.board_id = self.xls_create_board(monday_client,title,'public')
-                            self.id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.board_id,"Inicio","Fecha inicio","date")
-                            self.id_column_fecha_fin = self.xls_create_colummn(monday_client,self.board_id,"Fin","Fecha fin","date")
+                            self.id_column_fecha_inicio = self.xls_create_column(monday_client,self.board_id,"Inicio","Fecha inicio","date")
+                            self.id_column_fecha_fin = self.xls_create_column(monday_client,self.board_id,"Fin","Fecha fin","date")
                         if self.identify_type(outline_lvl) == 'group':
                             self.group_id = self.xls_create_group(monday_client,title,self.board_id)
                         if self.identify_type(outline_lvl) == 'item':
@@ -393,8 +409,8 @@ class ExcelUtilsMonday:
                             self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                             if not self.sub_board_columns_creadas:
                                 self.sub_board_id = self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
-                                self.sub_board_id_column_fecha_inicio = self.xls_create_colummn(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date")
-                                self.sub_board_id_column_fecha_fin = self.xls_create_colummn(monday_client,self.sub_board_id,"Fin","Fecha fin","date")
+                                self.sub_board_id_column_fecha_inicio = self.xls_create_column(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date")
+                                self.sub_board_id_column_fecha_fin = self.xls_create_column(monday_client,self.sub_board_id,"Fin","Fecha fin","date")
                                 self.sub_board_columns_creadas = True
                             self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
                             self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
@@ -437,7 +453,6 @@ class ExcelUtilsMonday:
         texto_con_escapeo = str(texto).replace("\\","\\\\")
         texto_con_escapeo = str(texto_con_escapeo).replace("\"","\\\"")
         return texto_con_escapeo
-        #return json.dumps(texto)
 
     def xls_create_board(self,monday_client:MondayClient,board_name,board_kind):
         """Crea un board"""
@@ -472,7 +487,7 @@ class ExcelUtilsMonday:
         logger.info(id_col)
         return id_col
 
-    def xls_create_colummn(self,monday_client:MondayClient,board_id:str,title:str,description:str,column_type:str):
+    def xls_create_column(self,monday_client:MondayClient,board_id:str,title:str,description:str,column_type:str):
         """Crea una columna en un board"""
         # Construir mutación GraphQL
         mutation = """
@@ -625,7 +640,6 @@ class ExcelUtilsMonday:
             analisis:AnalisisItem = obj
             logger.debug(analisis.get_log())
         self.proceso_completo = True
-        self.clean_files()
         return arr_analisis_items
 
 class Hilo():
