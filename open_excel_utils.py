@@ -447,11 +447,11 @@ class ExcelUtilsMonday:
                             self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
                             self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
                             self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
-                        if self.identify_type(outline_lvl) == 'subiteml2':
+                        if self.identify_type(outline_lvl) == 'subiteml2' and self.cargar_lvl_superirores_a_como_subitems:
                             self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                        if self.identify_type(outline_lvl) == 'subiteml3':
+                        if self.identify_type(outline_lvl) == 'subiteml3' and self.cargar_lvl_superirores_a_como_subitems:
                             self.item_id_l4 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
-                        if self.identify_type(outline_lvl) == 'subiteml4':
+                        if self.identify_type(outline_lvl) == 'subiteml4' and self.cargar_lvl_superirores_a_como_subitems:
                             self.item_id_l5 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                         if self.esperar:
                             time.sleep(self.wait_time)  # Pauses execution for 3 seconds.
