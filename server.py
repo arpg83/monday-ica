@@ -32,6 +32,8 @@ from board_response import Board
 from document_response import Document
 from block_response import Block
 from item_update_response import ItemUpdate 
+from item_response import ItemResponse
+from subitem_response import SubItem 
 
 load_dotenv()
 hilos = []
@@ -1188,24 +1190,34 @@ async def list_subitems_in_items(request: Request) -> OutputModel:
     subitems = []
     try:
         items_data = response.get("data", {}).get("items", [])
-        for item in items_data:
-            for sub in item.get("subitems", []):
-                subitems.append(f"- {sub['name']} (ID: {sub['id']})")
     except Exception as e:
         return OutputModel(
             invocationId=invocation_id,
             response=[ResponseMessageModel(message=f"Error al procesar la respuesta de Monday.com: {e}")]
         )
+    
+    # Construir el mensaje de salida
+    subitems_items = []
+    for i in items_data:
+        item = ItemResponse()
+        item.id = i["id"]
+        item.name = i["name"]
+        subitems_array = []
+        
+        for s in i.get("subitems", []):
+            subitem = SubItem()
+            subitem.id = s["id"]
+            subitem.name = s["name"]
+            subitems_array.append(subitem)
+        item.subitems = subitems_array
+        subitems_items.append(item)
 
-    if not subitems:
-        return OutputModel(
-            invocationId=invocation_id,
-            response=[ResponseMessageModel(message="No se encontraron subtareas en las tareas especificadas.")]
-        )
+    # Renderizar la plantilla con los datos
+    template = template_env.get_template('response_template_subitem_in_item_list.jinja')
+    message = template.render(subitems=subitems_items)
 
-    #Hacer Template response_template_item_list.jinja
-
-    message = f"Subtareas en las Tareas {params.item_ids} :\\n" + "\\n".join(subitems)
+    # Imprimir el mensaje resultante
+    logger.info(message)
 
     return OutputModel(
         invocationId=invocation_id,

@@ -1,0 +1,13 @@
+{% for item in subitems %}
+ID de la Tarea: {{ item.id }}
+Nombre: {{ item.name }}
+    {% if item.subitems %}
+    Subtareas:
+    {% for subitem in item.subitems %}
+    ID de la subtarea: {{ subitem.id }}
+    Nombre: {{ subitem.name }}
+    {% endfor %}
+    {% else %}
+    La Tarea no contiene subtareas.
+    {% endif %}
+{% endfor %}
