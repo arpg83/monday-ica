@@ -265,6 +265,7 @@ class ExcelUtilsMonday:
             "id_column_fecha_fin":str(self.id_column_fecha_fin),
             "sub_board_id_column_fecha_inicio":str(self.sub_board_id_column_fecha_inicio),
             "sub_board_id_column_fecha_fin":str(self.sub_board_id_column_fecha_fin),
+            "sub_board_columns_creadas":str(self.sub_board_columns_creadas),
         }
         text_json = json.dumps(data)
         logging.info(text_json)
@@ -307,6 +308,8 @@ class ExcelUtilsMonday:
                 self.sub_board_id_column_fecha_inicio = data["sub_board_id_column_fecha_inicio"]
             if "sub_board_id_column_fecha_fin" in data:
                 self.sub_board_id_column_fecha_fin = data["sub_board_id_column_fecha_fin"]
+            if "sub_board_columns_creadas" in data:
+                self.sub_board_columns_creadas = data["sub_board_columns_creadas"]
             logger.info("Fin de proceso")
             logger.info(self.board_id)
             logger.info(self.group_id)
