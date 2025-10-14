@@ -13,6 +13,31 @@ from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
+
+class MondayItem():
+    name:str
+    id:str    
+
+    def __init__(self):
+        pass
+
+class MondayGroup():
+    name:str
+    id:str
+    items:MondayItem = []
+
+    def __init__(self):
+        pass
+
+class MondayBoard():
+    name:str
+    id:str
+    groups:MondayGroup = []
+
+    def __init__(self):
+        pass
+
+
 class AnalisisItem():
     """Objeto para analizar y mostar la informacion de un item de monday"""
     row_inicio:int
@@ -71,8 +96,15 @@ class ExcelUtilsMonday:
     sub_board_id = None
     id_column_fecha_inicio = None
     id_column_fecha_fin = None
+    id_column_crono = None
+    id_column_persona = None
+    id_column_responsable = None
     sub_board_id_column_fecha_inicio = None
     sub_board_id_column_fecha_fin = None
+    sub_board_id_column_fecha_fin = None
+    sub_board_id_column_crono = None
+    sub_board_id_column_persona = None
+    sub_board_id_column_responsable = None
     pos = 0
     wait_time = 1
     esperar = True
@@ -434,22 +466,31 @@ class ExcelUtilsMonday:
                             self.board_id = self.xls_create_board(monday_client,title,'public')
                             self.id_column_fecha_inicio = self.xls_create_column(monday_client,self.board_id,"Inicio","Fecha inicio","date")
                             self.id_column_fecha_fin = self.xls_create_column(monday_client,self.board_id,"Fin","Fecha fin","date")
+                            self.id_column_crono = self.xls_create_column(monday_client,self.board_id,"Crono","Crono","timeline")
+                            self.id_column_persona = self.xls_create_column(monday_client,self.board_id,"Responsable Monday","responsable","text")
+                            self.id_column_responsable = self.xls_create_column(monday_client,self.board_id,"Responsable Externo","responsable","text")
                         if self.identify_type(outline_lvl) == 'group':
                             self.group_id = self.xls_create_group(monday_client,title,self.board_id)
                         if self.identify_type(outline_lvl) == 'item':
                             self.item_id_l1 = self.xls_create_item(monday_client,title,self.board_id,self.group_id)
-                            self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
-                            self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
+                            #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_inicio,fecha_inicio)
+                            #self.xls_asign_value_to_column(monday_client,self.board_id,self.item_id_l1,self.id_column_fecha_fin,fecha_fin)
+                            self.xls_asign_values_columns_primary_board(monday_client,self.board_id,self.item_id_l1,fecha_inicio,fecha_fin,None,"pepe")
                         if self.identify_type(outline_lvl) == 'subiteml1':
                             self.item_id_l2 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                             if not self.sub_board_columns_creadas:
                                 self.sub_board_id = self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
                                 self.sub_board_id_column_fecha_inicio = self.xls_create_column(monday_client,self.sub_board_id,"Inicio","Fecha inicio","date")
                                 self.sub_board_id_column_fecha_fin = self.xls_create_column(monday_client,self.sub_board_id,"Fin","Fecha fin","date")
+                                self.sub_board_id_column_crono = self.xls_create_column(monday_client,self.sub_board_id,"Crono","Crono","timeline")
+                                self.sub_board_id_column_persona = self.xls_create_column(monday_client,self.sub_board_id,"Responsable Monday","responsable","text")
+                                self.sub_board_id_column_responsable = self.xls_create_column(monday_client,self.sub_board_id,"Responsable Externo","responsable","text")
                                 self.sub_board_columns_creadas = True
                             self.get_sub_board_id_sub_item(monday_client,self.item_id_l1)
-                            self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
-                            self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
+                            #self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_inicio,fecha_inicio)
+                            #self.xls_asign_value_to_column(monday_client,self.sub_board_id,self.item_id_l2,self.sub_board_id_column_fecha_fin,fecha_fin)
+                            self.xls_asign_values_columns_sub_board(monday_client,self.sub_board_id,self.item_id_l2,fecha_inicio,fecha_fin,None,"pepe")
+
                         if self.identify_type(outline_lvl) == 'subiteml2' and self.cargar_lvl_superirores_a_como_subitems:
                             self.item_id_l3 = self.xls_create_sub_item(monday_client,title,self.item_id_l1,fecha_inicio)
                         if self.identify_type(outline_lvl) == 'subiteml3' and self.cargar_lvl_superirores_a_como_subitems:
@@ -605,6 +646,48 @@ class ExcelUtilsMonday:
         logger.info(mutation)
         response = monday_client.custom._query(mutation)
         logger.info(response)
+    
+    def xls_asign_value_to_column_multiple(self,monday_client:MondayClient,board_id:str,item_id:str,column_value:str):
+        """Asigna un valor a una columna"""
+        mutation = """
+        mutation {
+            change_multiple_column_values (board_id: %s, item_id: %s, column_values: %s) {
+                id
+            }
+        }
+        """ % (board_id,item_id,column_value)
+        logger.info(mutation)
+        response = monday_client.custom._query(mutation)
+        logger.info(response)
+
+    def xls_asign_values_columns_primary_board(self,monday_client:MondayClient,board_id:str,item_id:str,fecha_inicio:str,fecha_fin:str,persona:str,responsable:str):
+        """Asigna todas las columnas del board principal"""
+        #"{\"timeline\":{\"from\":\"2025-10-14\",\"to\":\"2025-10-21\"}}"
+        value_dict = {self.id_column_crono:{
+                            "from":fecha_inicio,
+                            "to":fecha_fin},
+                        self.id_column_fecha_inicio : fecha_inicio ,
+                        self.id_column_fecha_fin : fecha_fin ,
+                        self.id_column_persona : persona ,# ver como asignar
+                        self.id_column_responsable : responsable
+                      }
+        #value_dict = {column_id:{"from":"2025-10-14","to":"2025-10-21"}}
+        value = json.dumps(json.dumps(value_dict))
+        return self.xls_asign_value_to_column_multiple(monday_client,board_id,item_id,value)
+    
+    def xls_asign_values_columns_sub_board(self,monday_client:MondayClient,board_id:str,item_id:str,fecha_inicio:str,fecha_fin:str,persona:str,responsable:str):
+        """Asigna todas las columnas del board secundario"""
+        #"{\"timeline\":{\"from\":\"2025-10-14\",\"to\":\"2025-10-21\"}}"
+        value_dict = {self.sub_board_id_column_crono:{
+                            "from":fecha_inicio,
+                            "to":fecha_fin},
+                        self.sub_board_id_column_fecha_inicio : fecha_inicio ,
+                        self.sub_board_id_column_fecha_fin : fecha_fin ,
+                        self.sub_board_id_column_persona : persona ,# ver como asignar
+                        self.sub_board_id_column_responsable : responsable
+                      }
+        value = json.dumps(json.dumps(value_dict))
+        return self.xls_asign_value_to_column_multiple(monday_client,board_id,item_id,value)
 
     def get_sub_board_id_sub_item(self,monday_client:MondayClient,item_id:str):
         """Asigna un valor a una columna"""
