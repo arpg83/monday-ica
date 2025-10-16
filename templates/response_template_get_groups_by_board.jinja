@@ -1,10 +1,8 @@
 {% if cant_groups > 0 %}
-Grupos disponibles en el tablero (total: {{ cant_groups }}):
+Cantidad total de grupos disponibles en el tablero: {{ cant_groups }}
 {% for group in groups %}
-  - ID: {{ group.id }} | Título: {{ group.title }}
+  • {{ group.title }} (ID: {{ group.id }})
 {% endfor %}
 {% else %}
 No se encontraron grupos para el tablero especificado.
 {% endif %}
-
-

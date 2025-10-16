@@ -1,10 +1,11 @@
 {% if cant_workspaces > 0 %}
 Espacios de Trabajo:
 {% for workspace in workspaces %}
-   Id del espacio de trabajo: {{ workspace.id }}
+   Id del espacio de trabajo: {{ workspace.id }}   
    Nombre: {{ workspace.name }}
    Descripción: {{ workspace.desc }}
    Tipo de espacio de trabajo: {{ workspace.kind }}
+   
 {% endfor %}
 {% else %}
 No se recuperaron Espacios de trabajo en Monday.com
