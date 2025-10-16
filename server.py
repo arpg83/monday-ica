@@ -1037,6 +1037,7 @@ async def list_items_in_groups(request: Request) -> OutputModel:
 
     try:
         data = await request.json()
+        logger.info(data)
         params = ListItemsInGroupsParams(**data)
     except Exception as e:
         return OutputModel(
@@ -1704,9 +1705,10 @@ async def get_item_by_id(request: Request) -> OutputModel:
     )
 
     data = await request.json()
+    logger.info(data)
     params = None
     try:
-        params = GetItemByIdParams(**data)
+        params = GetItemByIdParams(**data)        
         logger.debug(params)
     except Exception as e:
         message = f"Error al recuperar el parámetro, verifique que el ID de la tarea, que ha sido proporcionado, exista en Monday.com:: {e}"
