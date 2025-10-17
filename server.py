@@ -573,7 +573,7 @@ async def create_doc_by_workspace(request: Request) -> OutputModel:
 
         Parámetros de entrada:
             title (str): Titulo del documento.
-            workspace_id (int): ID del espacio de trabajo.
+            workspace_id (str): ID del espacio de trabajo.
             kind (str): Tipo de documento del espacio de trabajo.
 
         Retorna:
@@ -644,8 +644,11 @@ async def create_doc_by_workspace(request: Request) -> OutputModel:
         )    
     
     if not created == None:
+        logger.info("entró.............")
         doc_id = created["id"]
         url_doc = created["url"]
+        logger.info(created["title"])
+        logger.info(params.title)
         title_doc = params.title
 
         template = template_env.get_template("response_template_create_doc_by_params.jinja")
@@ -1881,7 +1884,7 @@ async def get_board_columns(request: Request) -> OutputModel:
 #______________________________________________________________________________________________________________
 
 # 16 - monday-update-item: Update a Monday.com item's or sub-item's column values. 
-@app.put("/monday/item/update")
+@app.post("/monday/item/update")
 async def update_item(request: Request) -> OutputModel:
     '''
     Update a Monday.com item's or sub-item's column values.
@@ -1940,10 +1943,12 @@ async def update_item(request: Request) -> OutputModel:
     if not response is None:
         sin_respuesta = False
         id = response['data']['change_multiple_column_values']['id']
+        name = response['data']['change_multiple_column_values']['name']
     
+
     template = template_env.get_template("response_template_item_update.jinja")
     message = template.render(
-        id = params.subitem_name
+        id = id, name = name
         ,sin_respuesta = sin_respuesta
     )
 

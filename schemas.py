@@ -137,7 +137,7 @@ class UpdateItemParams(BaseModel):
     board_id: str
     item_id: str
     column_values: dict[str,Any] 
-    create_labels_if_missing: bool    
+    create_labels_if_missing: Optional[bool] = False    
 
 # 17 - monday-move-item-to-group: Moves a Monday.com item to a different group
 class MoveItemToGroup(BaseModel):
