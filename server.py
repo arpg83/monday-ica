@@ -1548,9 +1548,13 @@ async def get_doc_content(request: Request) -> OutputModel:
             block.content = ""
         blocks.append(block)
 
-    # Renderizar la plantilla con los datos
-    template = template_env.get_template('response_template_doc_content.jinja')
-    message = template.render(blocks=blocks,cant_blocks=int(len(blocks)),document=doc)
+    cant_blocks=int(len(blocks))
+    if cant_blocks == 1 and blocks[0].content == '':
+        message = f"El documento: {doc['name']} cuyo ID es: (ID: {doc['id']}) no tiene contenido."            
+    else:
+        # Renderizar la plantilla con los datos
+        template = template_env.get_template('response_template_doc_content.jinja')
+        message = template.render(blocks=blocks,cant_blocks=cant_blocks,document=doc)
 
     # Imprimir el mensaje resultante
     logger.info(message)
