@@ -1888,7 +1888,7 @@ async def get_board_columns(request: Request) -> OutputModel:
 #______________________________________________________________________________________________________________
 
 # 16 - monday-update-item: Update a Monday.com item's column values. 
-@app.post("/monday/item/update")
+@app.get("/monday/item/update")
 async def update_item(request: Request) -> OutputModel:
     '''
     Actualiza el valor de las columnas correspondientes a una tarea de Monday.com
