@@ -604,7 +604,7 @@ async def create_doc_by_workspace(request: Request) -> OutputModel:
             status="error",
             response=[ResponseMessageModel(message=message)]
         )
-    location = f'location: {{workspace: {{ workspace_id: "{params.workspace_id}", name: "{params.title}", kind: {params.kind} }} }}'
+    location = f'location: {{workspace: {{ workspace_id: "{params.workspace_id}", name: "{params.title}", kind: "{params.kind}" }} }}'
     response = None
     mutation = f"""
         mutation {{
@@ -1887,16 +1887,15 @@ async def get_board_columns(request: Request) -> OutputModel:
 #___________________________ UPDATE____________________________________________________________________________
 #______________________________________________________________________________________________________________
 
-# 16 - monday-update-item: Update a Monday.com item's or sub-item's column values. 
+# 16 - monday-update-item: Update a Monday.com item's column values. 
 @app.post("/monday/item/update")
 async def update_item(request: Request) -> OutputModel:
     '''
-    Update a Monday.com item's or sub-item's column values.
-    Actualiza el valor de las columnas correspondientes a una tarea o subtarea de Monday.com
+    Actualiza el valor de las columnas correspondientes a una tarea de Monday.com
 
     Parámetros de entrada:
-        boardId: ID del tablero de Monday.com al que pertenece la tarea o subtarea cuyas columnas se desean actualizar.
-        itemId: ID de la tarea o subtarea de Monday.com a la cual se le actualizarán los valores de las columnas.
+        board_Id: ID del tablero de Monday.com al que pertenece la tarea cuyas columnas se desean actualizar.
+        item_Id: ID de la tarea de Monday.com a la cual se le actualizarán los valores de las columnas.
         columnValues: Diccionario de valores de columna para actualizar la tarea o subtarea de Monday.com con. ({column_id: valor}).        
     '''
  
@@ -1911,8 +1910,17 @@ async def update_item(request: Request) -> OutputModel:
     )
 
     data = await request.json()
-    params = None  
-
+    
+    # Si column_values viene como string, intentar parsearlo
+    if isinstance(data.get("column_values"), str):
+        try:
+            data["column_values"] = json.loads(data["column_values"])
+        except json.JSONDecodeError:
+            return OutputModel(
+                invocationId=invocation_id,
+                response=[ResponseMessageModel(message="column_values debe ser un JSON válido en string.")]
+            )
+ 
     try:
         params = UpdateItemParams(**data)
     except Exception as e:
@@ -1930,7 +1938,7 @@ async def update_item(request: Request) -> OutputModel:
             board_id=params.board_id, 
             item_id=params.item_id, 
             column_values=params.column_values,
-            create_labels_if_missing=params.create_labels_if_missing
+            create_labels_if_missing=getattr(params, "create_labels_if_missing", None)
             )
 
         #Imprimo la respuesta
